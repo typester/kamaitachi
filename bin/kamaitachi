@@ -10,26 +10,7 @@ use FindBin;
 use File::Spec;
 use lib File::Spec->catfile( $FindBin::Bin, qw/.. lib/ );
 
-use Danga::Socket;
+use Kamaitachi;
 
-use IO::Handle;
-use IO::Socket::INET;
-use Socket;
+Kamaitachi->new->run;
 
-my $ssock = IO::Socket::INET->new(
-    LocalPort => 4423,
-    Type      => SOCK_STREAM,
-    Proto     => IPPROTO_TCP,
-    Blocking  => 0,
-    Reuse     => 1,
-    Listen    => 10,
-) or die $!;
-
-IO::Handle::blocking($ssock, 0);
-
-my $buf;
-
-Danga::Socket->new(
-    sock => $ssock,
-    
-);
