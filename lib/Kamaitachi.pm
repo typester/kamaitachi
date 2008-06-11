@@ -58,54 +58,41 @@ sub run {
 sub event_read {
     my ($self, $socket) = @_;
 
-    my $bref = $socket->read(1024);
-    return $socket->close unless defined $bref;
+    my $bref;
 
     # handshake
     if (not $socket->{handshaked}) {
-        if (not $socket->{client_handshake_packet} and substr($$bref, 0, 1) eq pack('C', 0x03) ) {
-            $self->logger->debug('start handshake');
-            $socket->{client_handshake_packet} .= substr $$bref, 1;
-        }
-        else {
-            $socket->{client_handshake_packet} .= $$bref;
-        }
+        $bref = $socket->read_bytes(0x600 + 1) or return;
 
-        if ( (my $len = length $socket->{client_handshake_packet} ) >= 1536) {
-            $socket->push_back_read( substr $socket->{client_handshake_packet}, 1536 ) if $len > 1536;
-            substr($socket->{client_handshake_packet}, 1536) = q[];
+        $socket->{client_handshake_packet} = substr $$bref, 1;
 
-            $socket->{server_handshake_packet} .= pack('C', int rand 0xff) for 1 .. 1536;
-            substr($socket->{server_handshake_packet}, 4, 4, pack('L', 0)); # XXX
+        $socket->{server_handshake_packet} .= pack('C', int rand 0xff) for 1 .. 1536;
+        substr($socket->{server_handshake_packet}, 4, 4, pack('L', 0)); # XXX
 
-            $socket->write(
-                pack('C', 0x03) . $socket->{server_handshake_packet} . $socket->{client_handshake_packet}
-            );
+        $socket->write(
+            pack('C', 0x03) . $socket->{server_handshake_packet} . $socket->{client_handshake_packet}
+        );
 
-            $self->logger->debug('send handshake packet');
-            $socket->{handshaked}++;
-            $socket->{buffer} = q[];
-        }
+        $self->logger->debug('send handshake packet');
+        $socket->{handshaked}++;
     }
     elsif ($socket->{handshaked} == 1) {
-        $socket->{buffer} .= $$bref;
-        if ( (my $len = length $socket->{buffer}) >= 1536) {
-            $socket->push_back_read( substr $socket->{buffer}, 1536 ) if $len > 1536;
-            substr( $socket->{buffer}, 1536 ) = q[];
+        $bref = $socket->read_bytes(0x600) or return;
 
-            if ($socket->{buffer} eq $socket->{server_handshake_packet}) {
-                $self->logger->debug('handshaked!');
-                $socket->{buffer} = q[];
-                $socket->{handshaked}++;
-            }
-            else {
-                $self->logger->debug('handshake filed: invalid packet');
-                $socket->close;
-            }
+        if ($$bref eq $socket->{server_handshake_packet}) {
+            $self->logger->debug('handshaked!');
+            $socket->{handshaked}++;
+        }
+        else {
+            $self->logger->debug('handshake filed: invalid packet');
+            $socket->close;
         }
     }
     else {
-        $self->dump( $$bref );
+        $bref = $socket->read(1024);
+        return unless defined $bref;
+
+        $self->dump( $$bref);
     }
 }
 
