@@ -9,16 +9,22 @@ use IO::Socket::INET;
 use Socket qw/IPPROTO_TCP TCP_NODELAY SOCK_STREAM/;
 use Danga::Socket;
 use Danga::Socket::Callback;
-use Data::HexDump ();
 
 use Kamaitachi::Socket;
+use Kamaitachi::Session;
 
 with 'MooseX::LogDispatch';
 
 has port => (
     is      => 'ro',
     isa     => 'Int',
-    default => sub { 4423 },
+    default => sub { 1935 },
+);
+
+has sessions => (
+    is      => 'rw',
+    isa     => 'ArrayRef',
+    default => sub { [] },
 );
 
 sub BUILD {
@@ -30,7 +36,7 @@ sub BUILD {
         Blocking  => 0,
         ReuseAddr => 1,
         Listen    => 10,
-    );
+    ) or die $!;
     IO::Handle::blocking($ssock, 0);
 
     Danga::Socket->AddOtherFds(
@@ -42,10 +48,18 @@ sub BUILD {
             IO::Handle::blocking($csock, 0);
             setsockopt($csock, IPPROTO_TCP, TCP_NODELAY, pack('l', 1)) or die;
 
+            my $session = Kamaitachi::Session->new(
+                id      => fileno($csock),
+                context => $self,
+            );
+            $self->sessions->[ $session->id ] = $session;
+
             Kamaitachi::Socket->new(
                 handle        => $csock,
-                on_read_ready => sub { $self->event_read(@_) },
-                context       => q{},
+                session       => $session,
+                on_read_ready => sub {
+                    $session->handler->( $session, shift );
+                },
             );
         }
     );
@@ -53,52 +67,6 @@ sub BUILD {
 
 sub run {
     Danga::Socket->EventLoop;
-}
-
-sub event_read {
-    my ($self, $socket) = @_;
-
-    my $bref;
-
-    # handshake
-    if (not $socket->{handshaked}) {
-        $bref = $socket->read_bytes(0x600 + 1) or return;
-
-        $socket->{client_handshake_packet} = substr $$bref, 1;
-
-        $socket->{server_handshake_packet} .= pack('C', int rand 0xff) for 1 .. 1536;
-        substr($socket->{server_handshake_packet}, 4, 4, pack('L', 0)); # XXX
-
-        $socket->write(
-            pack('C', 0x03) . $socket->{server_handshake_packet} . $socket->{client_handshake_packet}
-        );
-
-        $self->logger->debug('send handshake packet');
-        $socket->{handshaked}++;
-    }
-    elsif ($socket->{handshaked} == 1) {
-        $bref = $socket->read_bytes(0x600) or return;
-
-        if ($$bref eq $socket->{server_handshake_packet}) {
-            $self->logger->debug('handshaked!');
-            $socket->{handshaked}++;
-        }
-        else {
-            $self->logger->debug('handshake filed: invalid packet');
-            $socket->close;
-        }
-    }
-    else {
-        $bref = $socket->read(1024);
-        return unless defined $bref;
-
-        $self->dump( $$bref);
-    }
-}
-
-sub dump {
-    my $self = shift;
-    $self->logger->debug("\n" . Data::HexDump::HexDump(shift) . "\n");
 }
 
 =head1 NAME

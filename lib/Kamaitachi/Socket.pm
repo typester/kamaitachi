@@ -3,20 +3,21 @@ use strict;
 use warnings;
 use base 'Danga::Socket::Callback';
 
-use fields qw/
-                 handshaked
-                 client_handshake_packet
-                 server_handshake_packet
-
-                 buffer
-             /;
+use fields qw/session buffer/;
 
 sub new {
     my $self = fields::new(shift);
-    $self->SUPER::new(@_);
+    my %args = @_;
 
-    $self->{buffer} = q[];
+    $self->SUPER::new(%args);
+
+    $self->{session} = $args{session};
+    $self->{buffer}  = q[];
     $self;
+}
+
+sub session {
+    shift->{session};
 }
 
 sub read {
@@ -34,18 +35,30 @@ sub read {
 sub read_bytes {
     my ($self, $bytes) = @_;
 
+    my $res = q[];
+
+    if (length($self->{buffer}) >= $bytes) {
+        $res = substr $self->{buffer}, 0, $bytes;
+        $self->{buffer} = substr $self->{buffer}, $bytes;
+        return $res;
+    }
+
     my $bref = $self->read($bytes - length($self->{buffer})) or return;
 
-    my $res = $self->{buffer} . $$bref;
-
+    $res = $self->{buffer} . $$bref;
     if (length($res) == $bytes) {
         $self->{buffer} = q[];
-        return \$res;
+        return $res;
     }
     else {
         $self->{buffer} .= $$bref;
         return;
     }
+}
+
+sub DESTROY {
+    my $self = shift;
+    warn 'DESTROY!!!!!!!!!!!!!!!!';
 }
 
 1;
