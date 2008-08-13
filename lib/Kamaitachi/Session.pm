@@ -119,60 +119,74 @@ sub packet_unknown {
 
 sub packet_chunksize {
     my ($self, $socket, $packet) = @_;
+    $self->logger->debug("chunksize packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_bytes_read {
     my ($self, $socket, $packet) = @_;
+    $self->logger->debug("bytes_read packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_ping {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("ping packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_server_bw {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("server_bw packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_client_bw {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("client_bw packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_audio {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("audio packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_video {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("video packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_flex_stream {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("flex stream packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_flex_shared_object {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("flex shared object packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_flex_message {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("flex message packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_notify {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("notify packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_shared_object {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("client_bw packet: not implement yet");
+    $socket->close;
 }
 
 sub packet_invoke {
@@ -192,7 +206,8 @@ sub packet_invoke {
 
 sub packet_flv_info {
     my ($self, $socket, $packet) = @_;
-
+    $self->logger->debug("flv info packet: not implement yet");
+    $socket->close;
 }
 
 1;
