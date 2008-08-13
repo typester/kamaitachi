@@ -62,7 +62,7 @@ sub read_bytes {
 
 sub DESTROY {
     my $self = shift;
-    warn 'DESTROY!!!!!!!!!!!!!!!!';
+    $self->session->destroy;
 }
 
 1;

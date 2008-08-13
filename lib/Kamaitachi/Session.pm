@@ -210,5 +210,11 @@ sub packet_flv_info {
     $socket->close;
 }
 
+sub destroy {
+    my $self = shift;
+    $self->logger->debug(sprintf("Closed client connection for %d.", $self->id));
+    delete $self->context->sessions->[ $self->id ];
+}
+
 1;
 
