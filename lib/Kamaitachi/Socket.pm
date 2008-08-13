@@ -3,7 +3,9 @@ use strict;
 use warnings;
 use base 'Danga::Socket::Callback';
 
-use fields qw/session buffer/;
+use fields qw/session buffer io/;
+
+use Kamaitachi::IOStream;
 
 sub new {
     my $self = fields::new(shift);
@@ -11,14 +13,16 @@ sub new {
 
     $self->SUPER::new(%args);
 
+    $self->{io}      = Kamaitachi::IOStream->new( socket => $self );
     $self->{session} = $args{session};
     $self->{buffer}  = q[];
+
     $self;
 }
 
-sub session {
-    shift->{session};
-}
+sub io      { $_[0]->{io} }
+sub context { $_[0]->{context} }
+sub session { $_[0]->{session} }
 
 sub read {
     my $self = shift;

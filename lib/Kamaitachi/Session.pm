@@ -1,8 +1,7 @@
 package Kamaitachi::Session;
 use Moose;
 
-use Kamaitachi::Packet;
-use Data::AMF;
+use Kamaitachi::IOStream;
 
 with 'MooseX::LogDispatch';
 
@@ -75,15 +74,6 @@ has chunk_size => (
     default => sub { 128 },
 );
 
-has amf => (
-    is      => 'rw',
-    isa     => 'Object',
-    lazy    => 1,
-    default => sub {
-        Data::AMF->new( version => 0 );
-    },
-);
-
 __PACKAGE__->meta->make_immutable;
 
 sub handle_packet_connect {
@@ -115,7 +105,7 @@ sub handle_packet_handshake {
 sub handle_packet {
     my ($self, $socket) = @_;
 
-    my $packet = Kamaitachi::Packet->read($socket);
+    my $packet = $socket->io->get_packet or return;
 
     my $handler = $self->packet_handler->[ $packet->type ] || \&packet_unknown;
     $handler->($self, $socket, $packet);
@@ -123,7 +113,7 @@ sub handle_packet {
 
 sub packet_unknown {
     my ($self, $socket, $packet) = @_;
-    $self->logger->debug(sprintf('Unknown packet type: 0x%x', $packet->type));
+    $self->logger->debug(sprintf('Unknown packet type: 0x%02x', $packet->type));
     $socket->close;
 }
 
@@ -191,7 +181,12 @@ sub packet_invoke {
     my $func = $packet->function;
 
     if ($func->method eq 'connect') {
-        warn 'here';
+        my $res = $func->response({
+            level       => 'status',
+            code        => 'NetConnection.Connect.Success',
+            description => 'Connection succeeded.',
+        });
+        $socket->write( $res->serialize );
     }
 }
 

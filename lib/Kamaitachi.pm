@@ -9,6 +9,7 @@ use IO::Socket::INET;
 use Socket qw/IPPROTO_TCP TCP_NODELAY SOCK_STREAM/;
 use Danga::Socket;
 use Danga::Socket::Callback;
+use Data::AMF;
 
 use Kamaitachi::Socket;
 use Kamaitachi::Session;
@@ -25,6 +26,15 @@ has sessions => (
     is      => 'rw',
     isa     => 'ArrayRef',
     default => sub { [] },
+);
+
+has parser => (
+    is      => 'rw',
+    isa     => 'Object',
+    lazy    => 1,
+    default => sub {
+        Data::AMF->new( version => 0 ),
+    },
 );
 
 sub BUILD {
@@ -56,6 +66,7 @@ sub BUILD {
 
             Kamaitachi::Socket->new(
                 handle        => $csock,
+                context       => $self,
                 session       => $session,
                 on_read_ready => sub {
                     $session->handler->( $session, shift );

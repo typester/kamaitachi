@@ -1,6 +1,8 @@
 package Kamaitachi::Packet::Function;
 use Moose;
 
+use Kamaitachi::Packet;
+
 has method => (
     is       => 'rw',
     isa      => 'Str',
@@ -15,7 +17,6 @@ has id => (
 
 has args => (
     is      => 'rw',
-    isa     => 'HashRef',
     lazy    => 1,
     default => sub { {} },
 );
@@ -24,6 +25,17 @@ has packet => (
     is       => 'rw',
     isa      => 'Object',
     weak_ref => 1,
+);
+
+has context => (
+    is       => 'rw',
+    isa      => 'Object',
+    weak_ref => 1,
+    lazy     => 1,
+    default  => sub {
+        my $self = shift;
+        $self->packet->socket->context;
+    },
 );
 
 __PACKAGE__->meta->make_immutable;
@@ -42,8 +54,21 @@ sub response {
 sub serialize {
     my $self = shift;
 
-    
-}
+    my $parser = $self->context->parser;
+
+    my $data = $parser->serialize($self->method);
+    $data   .= $parser->serialize($self->id);
+    $data   .= $parser->serialize({ });
+    $data   .= $parser->serialize($self->args);
+
+    my $packet = Kamaitachi::Packet->new(
+        %{ $self->packet },
+        size => bytes::length($data),
+        data => $data,
+    );
+
+    $packet->serialize;
+};
 
 1;
 
