@@ -2,6 +2,7 @@ package Kamaitachi::Packet;
 use Moose;
 require bytes;
 
+use Data::AMF::IO;
 use Kamaitachi::Packet::Function;
 
 has number => (
@@ -39,47 +40,46 @@ has socket => (
     weak_ref => 1,
 );
 
-
 __PACKAGE__->meta->make_immutable;
 
 sub serialize {
     my $self = shift;
 
-    my $data = q[];
+    my $io = Data::AMF::IO->new( data => q[] );
 
     if ($self->number > 255) {
-        $data = pack('C', 0 & 0x3f);
-        $data .= pack('n', $self->number);
+        $io->write_u8( 0 & 0x3f );
+        $io->write_u16( $self->number );
     }
     elsif ($self->number > 63) {
-        $data = pack('C', 1 & 0x3f);
-        $data .= pack('C', $self->number);
+        $io->write_u8( 1 & 0x3f );
+        $io->write_u8( $self->number );
     }
     else {
-        $data = pack('C', $self->number & 0x3f);
+        $io->write_u8( $self->number & 0x3f );
     }
 
-    $data .= reverse pack('CCC', $self->timer);
-    $data .= reverse pack('CCC', $self->size);
-    $data .= pack('C', $self->type);
-    $data .= pack('N', $self->obj);
+    $io->write_u24( $self->timer );
+    $io->write_u24( $self->size );
+    $io->write_u8( $self->type );
+    $io->write_u32( $self->obj );
 
     my $socket     = $self->socket;
     my $chunk_size = $socket->session->chunk_size;
 
     if ($self->size <= $chunk_size) {
-        $data .= $self->data;
+        $io->write( $self->data );
     }
     else {
         for (my $cursor = 0; $cursor < $self->size; $cursor += $chunk_size) {
             my $read = substr $self->data, $cursor, $chunk_size;
             $read .= pack('C', 0xc3) if bytes::length($read) == $chunk_size;
 
-            $data .= $read;
+            $io->write( $read );
         }
     }
 
-    $data;
+    $io->data;
 }
 
 sub function {
