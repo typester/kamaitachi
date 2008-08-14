@@ -12,11 +12,42 @@ has socket => (
     required => 1,
 );
 
+has buffer => (
+    is      => 'rw',
+    isa     => 'Str',
+    default => sub { q[] },
+);
+
+has has_buffer => (
+    is      => 'rw',
+    isa     => 'Int',
+    default => sub { 0 },
+);
+
 __PACKAGE__->meta->make_immutable;
 
 sub read {
     my ($self, $len) = @_;
-    $self->socket->read_bytes( $len );
+
+    my $data;
+
+    if ($self->has_buffer) {
+        if (length($self->buffer) < $len) {
+            my $add = $self->socket->read_bytes( $len - length($self->buffer) );
+            $self->add_buffer($add);
+
+            return if length($self->buffer) < $len;
+        }
+
+        $data = substr $self->buffer, 0, $len;
+        $self->buffer( substr $self->buffer, $len );
+    }
+    else {
+        $data = $self->socket->read_bytes( $len );
+        $self->add_buffer($data);
+    }
+
+    $data;
 }
 
 sub write {
@@ -24,8 +55,21 @@ sub write {
     $self->socket->write($data);
 }
 
-sub get_packet {
+sub add_buffer {
+    my ($self, $data) = @_;
+    $self->{buffer} .= $data if defined $data;
+}
+
+sub clear_buffer {
     my $self = shift;
+    $self->has_buffer(0);
+    $self->buffer(q[]);
+}
+
+sub get_packet {
+    my ($self, $chunk_size) = @_;
+    $chunk_size ||= 128;
+
 
     my $first = $self->read_u8 or return;
 
@@ -39,8 +83,15 @@ sub get_packet {
         $amf_number = $self->read_u16;
     }
 
-    my $packet = $self->socket->session->packets->[ $amf_number ]
-                 ||= Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
+    my $packet;
+
+    if (my $session = $self->socket->session) {
+        $packet = $self->socket->session->packets->[ $amf_number ]
+                  ||= Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
+    }
+    else {
+        $packet = Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
+    }
 
     if ($header_size <= 2) {
         $packet->timer( $self->read_u24 );
@@ -55,7 +106,6 @@ sub get_packet {
 
     my $data = q[];
     my $size = $packet->size;
-    my $chunk_size = $self->socket->session->chunk_size;
 
     if ($size <= $chunk_size) {
         $data = $self->read($size);
@@ -65,16 +115,24 @@ sub get_packet {
         $data .= $self->read($chunk_size);
 
         while ($read < $size) {
-            $self->read(1);
+            my $c3 = $self->read(1);
 
             my $rest  = $size - $read;
             my $bytes = $rest > $chunk_size ? $chunk_size : $rest;
 
-            $data .= $self->read($bytes) or confess;
+            my $received = $self->read($bytes);
+            unless (defined $received) {
+                $self->has_buffer(1);
+                return;
+            }
+
+            $data .= $received;
             $read += $bytes;
         }
     }
     $packet->data( $data );
+
+    $self->clear_buffer;
 
     $packet;
 }
