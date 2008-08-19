@@ -105,7 +105,7 @@ sub handle_packet_handshake {
 sub handle_packet {
     my ($self, $socket) = @_;
 
-    my $packet = $socket->io->get_packet or return;
+    my $packet = $socket->io->get_packet( $self->chunk_size, $self->packets ) or return;
 
     my $handler = $self->packet_handler->[ $packet->type ] || \&packet_unknown;
     $handler->($self, $socket, $packet);
