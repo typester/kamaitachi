@@ -11,13 +11,20 @@ has number => (
 );
 
 has timer => (
-    is  => 'rw',
-    isa => 'Int',
+    is      => 'rw',
+    isa     => 'Int',
+    lazy    => 1,
+    default => sub { 0 },
 );
 
 has size => (
-    is  => 'rw',
-    isa => 'Int',
+    is      => 'rw',
+    isa     => 'Int',
+    lazy    => 1,
+    default => sub {
+        my $self = shift;
+        bytes::length($self->data);
+    },
 );
 
 has type => (
@@ -26,7 +33,9 @@ has type => (
 );
 
 has obj => (
-    is => 'rw',
+    is      => 'rw',
+    lazy    => 1,
+    default => sub { 0 },
 );
 
 has data => (

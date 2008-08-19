@@ -145,7 +145,7 @@ sub packet_bytes_read {
 sub packet_ping {
     my ($self, $socket, $packet) = @_;
     $self->logger->debug("ping packet: not implement yet");
-    $socket->close;
+#    $socket->close;
 }
 
 sub packet_server_bw {
@@ -162,14 +162,53 @@ sub packet_client_bw {
 
 sub packet_audio {
     my ($self, $socket, $packet) = @_;
-    $self->logger->debug("audio packet: not implement yet");
-    $socket->close;
+
+    $self->logger->debug(sprintf('audio packet from %d', $self->id));
+
+    for my $id (keys %{ $self->context->{child} || {} }) {
+        my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
+
+        if ($csession->{apublished}) {
+            $csocket->write( $packet->raw );
+        }
+        else {
+            $csocket->write( $packet->serialize );
+            $csession->{apublished}++;
+        }
+    }
 }
 
 sub packet_video {
     my ($self, $socket, $packet) = @_;
-    $self->logger->debug("video packet: not implement yet");
-    $socket->close;
+
+    $self->logger->debug(sprintf('video packet from %d', $self->id));
+
+    use YAML;
+    use Data::HexDump;
+    warn Dump({
+        number => $packet->number,
+        size   => $packet->size,
+        type   => $packet->type,
+    });
+    warn HexDump($packet->raw);
+
+    for my $id (keys %{ $self->context->{child} || {} }) {
+        my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
+
+        if ($csession->{vpublished}) {
+            $csocket->write( $packet->raw );
+        }
+        else {
+            my $first = unpack('C', substr $packet->data, 0, 1);
+            if ( $first >> 4 == 1 ) {
+                $csocket->write( $packet->serialize );
+
+                warn HexDump($packet->serialize);
+                die;
+                $csession->{vpublished}++;
+            }
+        }
+    }
 }
 
 sub packet_flex_stream {
@@ -207,6 +246,8 @@ sub packet_invoke {
 
     my $func = $packet->function;
 
+    $self->logger->debug(sprintf('[invoke] -> %s', $func->method));
+
     if ($func->method eq 'connect') {
         my $res = $func->response(undef, {
             level       => 'status',
@@ -214,6 +255,54 @@ sub packet_invoke {
             description => 'Connection succeeded.',
         });
         $socket->write( $res->serialize );
+    }
+    elsif ($func->method eq 'createStream') {
+        my $res = $func->response(undef, 1);
+        $socket->write( $res->serialize );
+    }
+    elsif ($func->method eq 'publish') {
+        my $parser = $self->context->parser;
+        my $onstatus = Kamaitachi::Packet->new(
+            number => $func->packet->number + 1,
+            type   => 0x14,
+            obj    => 0x01000000,
+            data   => $parser->serialize('onStatus', 1, undef, {
+                level       => 'status',
+                code        => 'NetStream.Publish.Start',
+                description => '-',
+            }),
+        );
+        $socket->write( $onstatus->serialize );
+    }
+    elsif ($func->method eq 'play') {
+        warn 'play: ', $func->args->[1];
+        my $parser = $self->context->parser;
+
+#        my $onstatus = Kamaitachi::Packet->new(
+#            number => $func->packet->number + 1,
+#            type   => 0x14,
+#            obj    => 0x01000000,
+#            data   => $parser->serialize('onStatus', 1, undef, {
+#                level       => 'status',
+#                code        => 'NetStream.Play.Reset',
+#                description => '-',
+#            }),
+#        );
+#        $socket->write( $onstatus->serialize );
+
+        my $onstatus2 = Kamaitachi::Packet->new(
+            number => $func->packet->number + 1,
+            type   => 0x14,
+            obj    => 0x01000000,
+            data   => $parser->serialize('onStatus', 1, undef, {
+                level       => 'status',
+                code        => 'NetStream.Play.Start',
+                description => '-',
+            }),
+        );
+        $socket->write( $onstatus2->serialize );
+
+        $self->context->{child}{ $self->id } = [$self, $socket];
     }
 }
 
@@ -227,6 +316,7 @@ sub destroy {
     my $self = shift;
     $self->logger->debug(sprintf("Closed client connection for %d.", $self->id));
     delete $self->context->sessions->[ $self->id ];
+    delete $self->context->{child}{ $self->id };
 }
 
 1;
