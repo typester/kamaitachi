@@ -71,6 +71,7 @@ sub read_bytes {
     my $bref = $self->read($bytes - length($self->{buffer})) or return;
 
     $res = $self->{buffer} . $$bref;
+
     if (length($res) > $bytes) {
         $self->{buffer} = substr $res, $bytes;
         $res = substr $res, 0, $bytes;
@@ -83,7 +84,7 @@ sub read_bytes {
         return \$res;
     }
     else {
-        $self->{buffer} .= $$bref;
+        $self->{buffer} = $res;
         return;
     }
 }

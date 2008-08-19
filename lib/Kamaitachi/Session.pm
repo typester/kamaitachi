@@ -172,13 +172,13 @@ sub packet_audio {
     for my $id (keys %{ $self->context->{child} || {} }) {
         my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
 
-#        if ($csession->{apublished}) {
-#            $csocket->write( $packet->raw );
-#        }
-#        else {
-            $csocket->write( $packet->serialize( $self->chunk_size ) );
-#            $csession->{apublished}++;
-#        }
+        if ($csession->{apublished}) {
+            $csession->write( $csocket, $packet, $packet->raw );
+        }
+        else {
+            $csession->write( $csocket, $packet );
+            $csession->{apublished}++;
+        }
     }
 }
 
@@ -194,13 +194,13 @@ sub packet_video {
         my ($csession, $csocket, $number) = @{ $self->context->{child}{$id} || [] };
 
         if ($csession->{vpublished}) {
-            $csocket->write( $packet->raw );
+            $csession->write( $csocket, $packet, $packet->raw );
         }
         else {
             # wait until keyframe
             my $first = unpack('C', substr $packet->data, 0, 1);
             if ( $first >> 4 == 1 ) {
-                $csocket->write( $packet->raw );
+                $csession->write( $csocket, $packet, $packet->raw );
                 $csession->{vpublished}++;
             }
         }
@@ -250,11 +250,11 @@ sub packet_invoke {
             code        => 'NetConnection.Connect.Success',
             description => 'Connection succeeded.',
         });
-        $socket->write( $res->serialize( $self->chunk_size ) );
+        $self->write( $socket, $res );
     }
     elsif ($func->method eq 'createStream') {
         my $res = $func->response(undef, 1);
-        $socket->write( $res->serialize( $self->chunk_size ) );
+        $self->write( $socket, $res );
     }
     elsif ($func->method eq 'publish') {
         my $parser = $self->context->parser;
@@ -265,12 +265,13 @@ sub packet_invoke {
 #            timer  => 0,
 #            type   => 1,
 #            data   => pack('N', 4096),
+#            obj    => 0,
 #        );
-#        $socket->write( $setchunk->serialize( $self->chunk_size ) );
+#        $self->write( $socket, $setchunk );
 #        $self->chunk_size(4096);
 
         my $onstatus = Kamaitachi::Packet->new(
-            number => $func->packet->number + 1,
+            number => 4,
             type   => 0x14,
             obj    => 0x01000000,
             data   => $parser->serialize('onStatus', 1, undef, {
@@ -279,24 +280,11 @@ sub packet_invoke {
                 description => '-',
             }),
         );
-        $socket->write( $onstatus->serialize( $self->chunk_size ) );
+        $self->write($socket, $onstatus);
     }
     elsif ($func->method eq 'play') {
         warn 'play: ', $func->args->[1];
         my $parser = $self->context->parser;
-
-        # test
-        $socket->write(pack('C*', 2,0,0,0,0,0,6,4,0,0,0,0,0,0,0,0,0,1));
-
-#        # set chunk_size
-#        my $setchunk = Kamaitachi::Packet->new(
-#            number => 2,
-#            timer  => 0,
-#            type   => 1,
-#            data   => pack('N', 4096),
-#        );
-#        $socket->write( $setchunk->serialize( $self->chunk_size ) );
-#        $self->chunk_size(4096);
 
         my $onstatus = Kamaitachi::Packet->new(
             number => 6,
@@ -308,7 +296,7 @@ sub packet_invoke {
                 description => '-',
             }),
         );
-        $socket->write( $onstatus->serialize( $self->chunk_size ) );
+        $self->write($socket, $onstatus);
 
         my $onstatus2 = Kamaitachi::Packet->new(
             number => 6,
@@ -320,19 +308,9 @@ sub packet_invoke {
                 description => '-',
             }),
         );
-        $socket->write( $onstatus2->serialize($self->chunk_size) );
+        $self->write($socket, $onstatus2);
 
         $self->context->{child}{ $self->id } = [$self, $socket];
-
-        my $ping;
-        $ping = sub {
-            return unless $socket;
-
-            # test
-            $socket->write(pack('C*', 2,0,0,0,0,0,6,4,0,0,0,0,0,0,0,0,0,1));
-            Danga::Socket->AddTimer(10, $ping);
-        };
-        Danga::Socket->AddTimer(10, $ping);
     }
 }
 
@@ -340,6 +318,13 @@ sub packet_flv_info {
     my ($self, $socket, $packet) = @_;
     $self->logger->debug("flv info packet: not implement yet");
     $socket->close;
+}
+
+sub write {
+    my ($self, $socket, $packet, $data) = @_;
+
+#    $self->packets->[ $packet->number ] = $packet;
+    $socket->write( $data || $packet->serialize($self->chunk_size) );
 }
 
 sub destroy {

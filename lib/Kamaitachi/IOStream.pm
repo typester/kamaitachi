@@ -49,7 +49,7 @@ sub read_u24 {
     my $self = shift;
 
     my $data = $self->read(3) or return;
-    return \unpack('N', "\0".$$data);
+    \unpack('N', "\0".$$data);
 }
 
 sub read_u32 {
@@ -91,6 +91,7 @@ sub write {
 sub get_packet {
     my ($self, $chunk_size, $packet_list) = @_;
     my $bref;
+
     $chunk_size  ||= 128;
     $packet_list ||= [];
 
@@ -107,12 +108,11 @@ sub get_packet {
         $amf_number = $$bref;
     }
     elsif ($amf_number == 1) {
-        $bref = $self->read_u8 or return;
+        $bref = $self->read_u16 or return;
         $amf_number = $$bref;
     }
 
-    my $packet = $packet_list->[ $amf_number ]
-                 ||= Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
+    my $packet = $packet_list->[ $amf_number ] || Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
 
     if ($header_size <= 2) {
         $bref = $self->read_u24 or return;
@@ -121,7 +121,6 @@ sub get_packet {
     if ($header_size <= 1) {
         $bref = $self->read_u24 or return;
         $packet->size( $$bref );
-
         $bref = $self->read_u8 or return;
         $packet->type( $$bref );
     }
@@ -133,30 +132,35 @@ sub get_packet {
     my $data = q[];
     my $size = $packet->size;
 
-    if ($size <= $chunk_size) {
-        $bref = $self->read($size) or return;
-        $data = $$bref;
-    }
-    else {
-        my $read = $chunk_size;
-        $bref = $self->read($chunk_size) or return;
-        $data .= $$bref;
-
-        while ($read < $size) {
-            my $c3 = $self->read(1) or return;
-
-            my $rest  = $size - $read;
-            my $bytes = $rest > $chunk_size ? $chunk_size : $rest;
-
-            $bref = $self->read($bytes) or return;
+    if ($size > 0) {
+        if ($size <= $chunk_size) {
+            $bref = $self->read($size) or return;
+            $data = $$bref;
+        }
+        else {
+            my $read = $chunk_size;
+            $bref = $self->read($chunk_size) or return;
             $data .= $$bref;
-            $read += $bytes;
+
+            while ($read < $size) {
+                my $c3 = $self->read(1) or return;
+
+                my $rest  = $size - $read;
+                my $bytes = $rest > $chunk_size ? $chunk_size : $rest;
+
+                $bref = $self->read($bytes) or return;
+                $data .= $$bref;
+                $read += $bytes;
+            }
         }
     }
-    $packet->data( $data );
+    $packet->data($data);
+
     $packet->raw( $self->socket->{readback} );
 
     $self->socket->end_read;
+
+    $packet_list->[ $amf_number ] = $packet;
 
     $packet;
 }
