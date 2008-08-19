@@ -139,7 +139,11 @@ sub packet_chunksize {
 sub packet_bytes_read {
     my ($self, $socket, $packet) = @_;
     $self->logger->debug("bytes_read packet: not implement yet");
-    $socket->close;
+
+    use Data::HexDump;
+    warn HexDump($packet->raw);
+
+#    $socket->close;
 }
 
 sub packet_ping {
@@ -168,13 +172,13 @@ sub packet_audio {
     for my $id (keys %{ $self->context->{child} || {} }) {
         my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
 
-        if ($csession->{apublished}) {
-            $csocket->write( $packet->raw );
-        }
-        else {
-            $csocket->write( $packet->serialize );
-            $csession->{apublished}++;
-        }
+#        if ($csession->{apublished}) {
+#            $csocket->write( $packet->raw );
+#        }
+#        else {
+            $csocket->write( $packet->serialize( $self->chunk_size ) );
+#            $csession->{apublished}++;
+#        }
     }
 }
 
@@ -183,28 +187,20 @@ sub packet_video {
 
     $self->logger->debug(sprintf('video packet from %d', $self->id));
 
-    use YAML;
-    use Data::HexDump;
-    warn Dump({
-        number => $packet->number,
-        size   => $packet->size,
-        type   => $packet->type,
-    });
-    warn HexDump($packet->raw);
+    $self->{start_time} ||= time;
+    warn 'sec: ', time - $self->{start_time};
 
     for my $id (keys %{ $self->context->{child} || {} }) {
-        my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
+        my ($csession, $csocket, $number) = @{ $self->context->{child}{$id} || [] };
 
         if ($csession->{vpublished}) {
             $csocket->write( $packet->raw );
         }
         else {
+            # wait until keyframe
             my $first = unpack('C', substr $packet->data, 0, 1);
             if ( $first >> 4 == 1 ) {
-                $csocket->write( $packet->serialize );
-
-                warn HexDump($packet->serialize);
-                die;
+                $csocket->write( $packet->raw );
                 $csession->{vpublished}++;
             }
         }
@@ -254,14 +250,25 @@ sub packet_invoke {
             code        => 'NetConnection.Connect.Success',
             description => 'Connection succeeded.',
         });
-        $socket->write( $res->serialize );
+        $socket->write( $res->serialize( $self->chunk_size ) );
     }
     elsif ($func->method eq 'createStream') {
         my $res = $func->response(undef, 1);
-        $socket->write( $res->serialize );
+        $socket->write( $res->serialize( $self->chunk_size ) );
     }
     elsif ($func->method eq 'publish') {
         my $parser = $self->context->parser;
+
+#        # set chunk_size
+#        my $setchunk = Kamaitachi::Packet->new(
+#            number => 2,
+#            timer  => 0,
+#            type   => 1,
+#            data   => pack('N', 4096),
+#        );
+#        $socket->write( $setchunk->serialize( $self->chunk_size ) );
+#        $self->chunk_size(4096);
+
         my $onstatus = Kamaitachi::Packet->new(
             number => $func->packet->number + 1,
             type   => 0x14,
@@ -272,26 +279,39 @@ sub packet_invoke {
                 description => '-',
             }),
         );
-        $socket->write( $onstatus->serialize );
+        $socket->write( $onstatus->serialize( $self->chunk_size ) );
     }
     elsif ($func->method eq 'play') {
         warn 'play: ', $func->args->[1];
         my $parser = $self->context->parser;
 
-#        my $onstatus = Kamaitachi::Packet->new(
-#            number => $func->packet->number + 1,
-#            type   => 0x14,
-#            obj    => 0x01000000,
-#            data   => $parser->serialize('onStatus', 1, undef, {
-#                level       => 'status',
-#                code        => 'NetStream.Play.Reset',
-#                description => '-',
-#            }),
+        # test
+        $socket->write(pack('C*', 2,0,0,0,0,0,6,4,0,0,0,0,0,0,0,0,0,1));
+
+#        # set chunk_size
+#        my $setchunk = Kamaitachi::Packet->new(
+#            number => 2,
+#            timer  => 0,
+#            type   => 1,
+#            data   => pack('N', 4096),
 #        );
-#        $socket->write( $onstatus->serialize );
+#        $socket->write( $setchunk->serialize( $self->chunk_size ) );
+#        $self->chunk_size(4096);
+
+        my $onstatus = Kamaitachi::Packet->new(
+            number => 6,
+            type   => 0x14,
+            obj    => 0x01000000,
+            data   => $parser->serialize('onStatus', 1, undef, {
+                level       => 'status',
+                code        => 'NetStream.Play.Reset',
+                description => '-',
+            }),
+        );
+        $socket->write( $onstatus->serialize( $self->chunk_size ) );
 
         my $onstatus2 = Kamaitachi::Packet->new(
-            number => $func->packet->number + 1,
+            number => 6,
             type   => 0x14,
             obj    => 0x01000000,
             data   => $parser->serialize('onStatus', 1, undef, {
@@ -300,9 +320,19 @@ sub packet_invoke {
                 description => '-',
             }),
         );
-        $socket->write( $onstatus2->serialize );
+        $socket->write( $onstatus2->serialize($self->chunk_size) );
 
         $self->context->{child}{ $self->id } = [$self, $socket];
+
+        my $ping;
+        $ping = sub {
+            return unless $socket;
+
+            # test
+            $socket->write(pack('C*', 2,0,0,0,0,0,6,4,0,0,0,0,0,0,0,0,0,1));
+            Danga::Socket->AddTimer(10, $ping);
+        };
+        Danga::Socket->AddTimer(10, $ping);
     }
 }
 

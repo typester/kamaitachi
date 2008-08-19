@@ -85,7 +85,7 @@ sub serialize {
     else {
         for (my $cursor = 0; $cursor < $self->size; $cursor += $chunk_size) {
             my $read = substr $self->data, $cursor, $chunk_size;
-            $read .= pack('C', 0xc3) if bytes::length($read) == $chunk_size;
+            $read .= pack('C', 0xc3) if $cursor + bytes::length($read) < $self->size;
 
             $io->write( $read );
         }
