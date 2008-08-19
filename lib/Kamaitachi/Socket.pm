@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use base 'Danga::Socket::Callback';
 
-use fields qw/session buffer io/;
+use fields qw/session buffer io reading readback/;
 
 use Kamaitachi::IOStream;
 
@@ -17,12 +17,32 @@ sub new {
     $self->{session} = $args{session};
     $self->{buffer}  = q[];
 
+    $self->{reading}  = 0;
+    $self->{readback} = q[];
+
     $self;
 }
 
 sub io      { $_[0]->{io} }
 sub context { $_[0]->{context} }
 sub session { $_[0]->{session} }
+
+sub start_read {
+    my $self = shift;
+
+    if ($self->{readback}) {
+        $self->{buffer} = $self->{readback} . $self->{buffer};
+        $self->{readback} = q[];
+    }
+
+    $self->{reading} = 1;
+}
+
+sub end_read {
+    my $self = shift;
+    $self->{readback} = q[];
+    $self->{reading} = 0;
+}
 
 sub read {
     my $self = shift;
@@ -44,15 +64,23 @@ sub read_bytes {
     if (length($self->{buffer}) >= $bytes) {
         $res = substr $self->{buffer}, 0, $bytes;
         $self->{buffer} = substr $self->{buffer}, $bytes;
-        return $res;
+        $self->{readback} .= $res if $self->{reading};
+        return \$res;
     }
 
     my $bref = $self->read($bytes - length($self->{buffer})) or return;
 
     $res = $self->{buffer} . $$bref;
-    if (length($res) == $bytes) {
+    if (length($res) > $bytes) {
+        $self->{buffer} = substr $res, $bytes;
+        $res = substr $res, 0, $bytes;
+        $self->{readback} .= $res if $self->{reading};
+        return \$res;
+    }
+    elsif (length($res) == $bytes) {
         $self->{buffer} = q[];
-        return $res;
+        $self->{readback} .= $res if $self->{reading};
+        return \$res;
     }
     else {
         $self->{buffer} .= $$bref;

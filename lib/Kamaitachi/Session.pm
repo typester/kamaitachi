@@ -78,9 +78,16 @@ __PACKAGE__->meta->make_immutable;
 
 sub handle_packet_connect {
     my ($self, $socket) = @_;
+    my $bref;
 
-    $socket->read_bytes(1);
-    my $client_handshake_packet = $socket->read_bytes(0x600) or return;
+    $socket->start_read;
+
+    $socket->read_bytes(1) or return;
+
+    $bref = $socket->read_bytes(0x600) or return;
+    my $client_handshake_packet = $$bref;
+
+    $socket->end_read;
 
     $socket->write(
         pack('C', 0x03) . $self->handshake_packet . $client_handshake_packet
@@ -92,13 +99,19 @@ sub handle_packet_connect {
 sub handle_packet_handshake {
     my ($self, $socket) = @_;
 
-    my $packet = $socket->read_bytes(0x600) or return;
+    $socket->start_read;
+    my $bref = $socket->read_bytes(0x600) or return;
+    $socket->end_read;
+
+    my $packet = $$bref;
 
     if ($packet eq $self->handshake_packet) {
         $self->handler( \&handle_packet );
     }
     else {
-        $socket->close;
+        $self->logger->debug(sprintf('handshake failed with client: %d', $self->id));
+        $self->handler( \&handle_packet ); # XXX: TODO
+        #$socket->close;
     }
 }
 
@@ -195,7 +208,7 @@ sub packet_invoke {
     my $func = $packet->function;
 
     if ($func->method eq 'connect') {
-        my $res = $func->response({
+        my $res = $func->response(undef, {
             level       => 'status',
             code        => 'NetConnection.Connect.Success',
             description => 'Connection succeeded.',

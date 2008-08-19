@@ -1,6 +1,8 @@
 package Kamaitachi::IOStream;
 use Moose;
 
+use constant ENDIAN => unpack('S', pack('C2', 0, 1)) == 1 ? 'BIG' : 'LITTLE';
+
 extends 'Data::AMF::IO';
 
 use Kamaitachi::Packet;
@@ -12,42 +14,73 @@ has socket => (
     required => 1,
 );
 
-has buffer => (
-    is      => 'rw',
-    isa     => 'Str',
-    default => sub { q[] },
-);
-
-has has_buffer => (
-    is      => 'rw',
-    isa     => 'Int',
-    default => sub { 0 },
-);
-
 __PACKAGE__->meta->make_immutable;
 
 sub read {
     my ($self, $len) = @_;
+    $self->socket->read_bytes($len);
+}
 
-    my $data;
+sub read_u8 {
+    my $self = shift;
 
-    if ($self->has_buffer) {
-        if (length($self->buffer) < $len) {
-            my $add = $self->socket->read_bytes( $len - length($self->buffer) );
-            $self->add_buffer($add);
+    my $bref = $self->read(1) or return;
+    \unpack('C', $$bref);
+}
 
-            return if length($self->buffer) < $len;
-        }
+sub read_u16 {
+    my $self = shift;
 
-        $data = substr $self->buffer, 0, $len;
-        $self->buffer( substr $self->buffer, $len );
-    }
-    else {
-        $data = $self->socket->read_bytes( $len );
-        $self->add_buffer($data);
-    }
+    my $data = $self->read(2) or return;
+    \unpack('n', $$data);
+}
 
-    $data;
+sub read_s16 {
+    my $self = shift;
+
+    my $data = $self->read(2) or return;
+
+    return \unpack('s>', $$data) if $] >= 5.009002;
+    return \unpack('s', $$data)  if ENDIAN eq 'BIG';
+    return \unpack('s', swap($$data));
+}
+
+sub read_u24 {
+    my $self = shift;
+
+    my $data = $self->read(3) or return;
+    return \unpack('N', "\0".$$data);
+}
+
+sub read_u32 {
+    my $self = shift;
+
+    my $data = $self->read(4) or return;
+    \unpack('N', $$data);
+}
+
+sub read_double {
+    my $self = shift;
+
+    my $data = $self->read(8) or return;
+
+    return \unpack('d>', $$data) if $] >= 5.009002;
+    return \unpack('d', $$data)  if ENDIAN eq 'BIG';
+    return \unpack('d', swap($$data));
+}
+
+sub read_utf8 {
+    my $self = shift;
+
+    my $len = $self->read_u16 or return;
+    my $bref = $self->read($len) or return;
+}
+
+sub read_utf8_long {
+    my $self = shift;
+
+    my $len = $self->read_u32 or return;
+    my $bref = $self->read($len) or return;
 }
 
 sub write {
@@ -55,78 +88,75 @@ sub write {
     $self->socket->write($data);
 }
 
-sub add_buffer {
-    my ($self, $data) = @_;
-    $self->{buffer} .= $data if defined $data;
-}
-
-sub clear_buffer {
-    my $self = shift;
-    $self->has_buffer(0);
-    $self->buffer(q[]);
-}
-
 sub get_packet {
     my ($self, $chunk_size, $packet_list) = @_;
+    my $bref;
     $chunk_size  ||= 128;
     $packet_list ||= [];
 
-    my $first = $self->read_u8 or return;
+    $self->socket->start_read;
+
+    $bref = $self->read_u8 or return;
+    my $first = $$bref;
 
     my $header_size = $first >> 6;
     my $amf_number  = $first & 0x3f;
 
     if ($amf_number == 0) {
-        $amf_number = $self->read_u8;
+        $bref = $self->read_u8 or return;
+        $amf_number = $$bref;
     }
     elsif ($amf_number == 1) {
-        $amf_number = $self->read_u16;
+        $bref = $self->read_u8 or return;
+        $amf_number = $$bref;
     }
 
     my $packet = $packet_list->[ $amf_number ]
                  ||= Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
 
     if ($header_size <= 2) {
-        $packet->timer( $self->read_u24 );
+        $bref = $self->read_u24 or return;
+        $packet->timer( $$bref );
     }
     if ($header_size <= 1) {
-        $packet->size( $self->read_u24 );
-        $packet->type( $self->read_u8 );
+        $bref = $self->read_u24 or return;
+        $packet->size( $$bref );
+
+        $bref = $self->read_u8 or return;
+        $packet->type( $$bref );
     }
     if ($header_size <= 0) {
-        $packet->obj( $self->read_u32 );
+        $bref = $self->read_u32 or return;
+        $packet->obj( $$bref );
     }
 
     my $data = q[];
     my $size = $packet->size;
 
     if ($size <= $chunk_size) {
-        $data = $self->read($size);
+        $bref = $self->read($size) or return;
+        $data = $$bref;
     }
     else {
         my $read = $chunk_size;
-        $data .= $self->read($chunk_size);
+        $bref = $self->read($chunk_size) or return;
+        $data .= $$bref;
 
         while ($read < $size) {
-            my $c3 = $self->read(1);
+            my $c3 = $self->read(1) or return;
 
             my $rest  = $size - $read;
             my $bytes = $rest > $chunk_size ? $chunk_size : $rest;
 
-            my $received = $self->read($bytes);
-            unless (defined $received) {
-                $self->has_buffer(1);
-                return;
-            }
-
-            $data .= $received;
+            $bref = $self->read($bytes) or return;
+            $data .= $$bref;
             $read += $bytes;
         }
     }
     $packet->data( $data );
-    $packet->raw( $self->buffer );
+    $packet->raw( $self->socket->{readback} );
 
-    $self->clear_buffer;
+    $self->socket->end_read;
 
     $packet;
 }
