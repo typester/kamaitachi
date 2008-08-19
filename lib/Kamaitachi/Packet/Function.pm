@@ -17,6 +17,7 @@ has id => (
 
 has args => (
     is      => 'rw',
+    isa     => 'ArrayRef',
     lazy    => 1,
     default => sub { {} },
 );
@@ -41,12 +42,12 @@ has context => (
 __PACKAGE__->meta->make_immutable;
 
 sub response {
-    my ($self, $obj) = @_;
+    my ($self, @obj) = @_;
 
     Kamaitachi::Packet::Function->new(
         method => '_result',
         id     => $self->id,
-        args   => $obj,
+        args   => \@obj,
         packet => $self->packet,
     );
 }
@@ -56,10 +57,11 @@ sub serialize {
 
     my $parser = $self->context->parser;
 
-    my $data = $parser->serialize($self->method);
-    $data   .= $parser->serialize($self->id);
-    $data   .= $parser->serialize({ });
-    $data   .= $parser->serialize($self->args);
+    my $data = $parser->serialize(
+        $self->method,
+        $self->id,
+        @{ $self->args },
+    );
 
     my $packet = Kamaitachi::Packet->new(
         %{ $self->packet },

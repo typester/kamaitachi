@@ -34,6 +34,11 @@ has data => (
     isa => 'Str',
 );
 
+has raw => (
+    is  => 'rw',
+    isa => 'Str',
+);
+
 has socket => (
     is       => 'rw',
     isa      => 'Object',
@@ -43,7 +48,8 @@ has socket => (
 __PACKAGE__->meta->make_immutable;
 
 sub serialize {
-    my $self = shift;
+    my ($self, $chunk_size) = @_;
+    $chunk_size ||= 128;
 
     my $io = Data::AMF::IO->new( data => q[] );
 
@@ -64,9 +70,6 @@ sub serialize {
     $io->write_u8( $self->type );
     $io->write_u32( $self->obj );
 
-    my $socket     = $self->socket;
-    my $chunk_size = $socket->session->chunk_size;
-
     if ($self->size <= $chunk_size) {
         $io->write( $self->data );
     }
@@ -85,12 +88,12 @@ sub serialize {
 sub function {
     my $self = shift;
 
-    my ($method, $id, $args) = $self->socket->context->parser->deserialize($self->data);
+    my ($method, $id, @args) = $self->socket->context->parser->deserialize($self->data);
 
     Kamaitachi::Packet::Function->new(
         method => $method,
         id     => $id,
-        args   => $args,
+        args   => \@args,
         packet => $self,
     );
 }

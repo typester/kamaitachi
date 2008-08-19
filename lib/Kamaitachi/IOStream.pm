@@ -67,9 +67,9 @@ sub clear_buffer {
 }
 
 sub get_packet {
-    my ($self, $chunk_size) = @_;
-    $chunk_size ||= 128;
-
+    my ($self, $chunk_size, $packet_list) = @_;
+    $chunk_size  ||= 128;
+    $packet_list ||= [];
 
     my $first = $self->read_u8 or return;
 
@@ -83,15 +83,8 @@ sub get_packet {
         $amf_number = $self->read_u16;
     }
 
-    my $packet;
-
-    if (my $session = $self->socket->session) {
-        $packet = $self->socket->session->packets->[ $amf_number ]
-                  ||= Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
-    }
-    else {
-        $packet = Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
-    }
+    my $packet = $packet_list->[ $amf_number ]
+                 ||= Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
 
     if ($header_size <= 2) {
         $packet->timer( $self->read_u24 );
@@ -131,6 +124,7 @@ sub get_packet {
         }
     }
     $packet->data( $data );
+    $packet->raw( $self->buffer );
 
     $self->clear_buffer;
 
