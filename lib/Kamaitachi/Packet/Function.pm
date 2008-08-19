@@ -69,7 +69,7 @@ sub serialize {
         data => $data,
     );
 
-    $packet->serialize;
+    $packet->serialize(@_);
 };
 
 1;
