@@ -17,7 +17,7 @@ use Kamaitachi::Session;
 with 'MooseX::LogDispatch';
 
 has port => (
-    is      => 'ro',
+    is      => 'rw',
     isa     => 'Int',
     default => sub { 1935 },
 );
