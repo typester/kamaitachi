@@ -122,6 +122,22 @@ sub handle_packet_handshake {
         $self->handler( \&handle_packet ); # XXX: TODO
         $self->handler->($self, $socket);
     }
+
+    # server bandwidth
+    my $server_bw = Kamaitachi::Packet->new(
+        number => 2,
+        type   => 5,
+        data   => pack('C*', 0, 0x26, 0x25, 0xa0),
+    );
+    $self->write($socket, $server_bw);
+
+    # client bandwidth
+    my $client_bw = Kamaitachi::Packet->new(
+        number => 2,
+        type   => 6,
+        data   => pack('C*', 0, 0x26, 0x25, 0xa0, 0x02),
+    );
+    $self->write($socket, $client_bw);
 }
 
 sub handle_packet {
@@ -153,23 +169,19 @@ sub packet_chunksize {
 sub packet_bytes_read {
     my ($self, $socket, $packet) = @_;
     $self->logger->debug("bytes_read packet: not implement yet");
-
-    use Data::HexDump;
-    warn HexDump($packet->raw);
-
 #    $socket->close;
 }
 
 sub packet_ping {
     my ($self, $socket, $packet) = @_;
-    $self->logger->debug("ping packet: not implement yet");
+    $self->logger->debug("bytes_read packet: not implement yet");
 #    $socket->close;
 }
 
 sub packet_server_bw {
     my ($self, $socket, $packet) = @_;
     $self->logger->debug("server_bw packet: not implement yet");
-    $socket->close;
+#    $socket->close;
 }
 
 sub packet_client_bw {
@@ -240,6 +252,7 @@ sub packet_invoke {
     if ($func->method eq 'connect') {
 #        $socket->write( pack('C*', 2,0,0,0,0,0,4,5,0,0,0,0,0,0x26,0x25,0xa0) );
 #        $socket->write( pack('C*', 2,0,0,0,0,0,5,4,0,0,0,0,0,0x26,0x25,0xa0,0x02) );
+#        $socket->write( pack('C*', 2,0,0,0,0,0,4,5,0,0,0,0,0,2,0,0) );
 
         my $res = $func->response(undef, {
             level       => 'status',
@@ -283,14 +296,38 @@ sub packet_invoke {
         warn 'play: ', $func->args->[1];
         my $parser = $self->context->parser;
 
+#        my $set_chunk_size = Kamaitachi::Packet->new(
+#            number => 2,
+#            type   => 1,
+#            data   => pack('N', 4096),
+#        );
+#        $self->write($socket, $set_chunk_size);
+#        $self->chunk_size(4096);
+
+        # aaa bbb
+        my $aaa = Kamaitachi::Packet->new(
+            number => 2,
+            type   => 4,
+            data   => pack('C*', 0, 4, 0, 0, 0, 1),
+        );
+        my $bbb = Kamaitachi::Packet->new(
+            number => 2,
+            type   => 4,
+            data   => pack('C*', 0, 0, 0, 0, 0, 1),
+        );
+
+#        $self->write($socket, $aaa);
+#        $self->write($socket, $bbb);
+
         my $onstatus = Kamaitachi::Packet->new(
             number => 6,
             type   => 0x14,
-            obj    => 0x01000000,
+            obj    => $packet->obj,
             data   => $parser->serialize('onStatus', 1, undef, {
                 level       => 'status',
                 code        => 'NetStream.Play.Reset',
                 description => '-',
+                clientid    => 1,
             }),
         );
         $self->write($socket, $onstatus);
@@ -298,16 +335,44 @@ sub packet_invoke {
         my $onstatus2 = Kamaitachi::Packet->new(
             number => 6,
             type   => 0x14,
-            obj    => 0x01000000,
+            obj    => $packet->obj,
             data   => $parser->serialize('onStatus', 1, undef, {
                 level       => 'status',
                 code        => 'NetStream.Play.Start',
                 description => '-',
+                clientid    => 1,
             }),
         );
         $self->write($socket, $onstatus2);
 
-        $self->context->{child}{ $self->id } = [$self, $socket];
+
+        #        $self->context->{child}{ $self->id } = [$self, $socket];
+        open my $fh, '<', '/home/typester/dev/tmp/smile.mp3';
+
+        use MPEG::Audio::Frame;
+
+        my $stream;
+        $stream = sub {
+            my ($seconds, $bytes) = (0, 0);
+
+            while (my $frame = MPEG::Audio::Frame->read($fh)) {
+                my $audio = Kamaitachi::Packet->new(
+                    number => 4,
+                    type   => 0x08,
+                    obj    => $packet->obj,
+                    data   => pack('C', 0x2f) . $frame->asbin,
+                );
+                $seconds += $frame->seconds;
+                $bytes   += $frame->length;
+
+                $self->write($socket, $audio);
+
+                last if 0.1 <= $seconds;
+            }
+
+            Danga::Socket->AddTimer($seconds, $stream);
+        };
+        Danga::Socket->AddTimer(1, $stream);
     }
 }
 
