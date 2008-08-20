@@ -171,12 +171,15 @@ sub get_packet {
     if ($header_size <= 2) {
         $bref = $self->read_u24 or return $self->reset;
         $packet->timer( $$bref );
+        $packet->{continue} = 1;
     }
     if ($header_size <= 1) {
         $bref = $self->read_u24 or return $self->reset;
         $packet->size( $$bref );
         $bref = $self->read_u8 or return $self->reset;
         $packet->type( $$bref );
+
+        $packet->{continue} = 0;
 
         $packet->data(q[]);
         $packet->raw(q[]);
@@ -189,7 +192,7 @@ sub get_packet {
     my $data = q[];
     my $size = $packet->size;
 
-    if (bytes::length($packet->data) < $size) {
+    if ($packet->data and bytes::length($packet->data) < $size) {
         $data = $packet->data;
         $size -= bytes::length($packet->data);
     }

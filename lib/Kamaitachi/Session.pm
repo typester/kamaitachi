@@ -185,14 +185,7 @@ sub packet_audio {
 
     for my $id (keys %{ $self->context->{child} || {} }) {
         my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
-
-        if ($csession->{apublished}) {
-            $csession->write( $csocket, $packet, $packet->raw );
-        }
-        else {
-            $csession->write( $csocket, $packet, $packet->raw );
-            $csession->{apublished}++;
-        }
+        $csession->broadcast( $csocket, $packet );
     }
 }
 
@@ -201,23 +194,9 @@ sub packet_video {
 
 #    $self->logger->debug(sprintf('video packet from %d', $self->id));
 
-    $self->{start_time} ||= time;
-    warn 'sec: ', time - $self->{start_time};
-
     for my $id (keys %{ $self->context->{child} || {} }) {
-        my ($csession, $csocket, $number) = @{ $self->context->{child}{$id} || [] };
-
-        if ($csession->{vpublished}) {
-            $csession->write( $csocket, $packet, $packet->raw );
-        }
-        else {
-            # wait until keyframe
-            my $first = unpack('C', substr $packet->data, 0, 1);
-            if ( $first >> 4 == 1 ) {
-                $csession->write( $csocket, $packet, $packet->raw );
-                $csession->{vpublished}++;
-            }
-        }
+        my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
+        $csession->broadcast( $csocket, $packet );
     }
 }
 
@@ -349,6 +328,30 @@ sub write {
 #    }
 
     $socket->write( $data || $packet->serialize($self->chunk_size) );
+}
+
+sub broadcast {
+    my ($self, $socket, $packet) = @_;
+
+    if ($self->{received}{ $packet->number }) {
+        $self->write($socket, $packet, $packet->raw);
+    }
+    else {
+        if ($packet->type == 0x09) { # video
+            # wait for key frame
+            return if $packet->{continue};
+            my $first = unpack('C', substr $packet->data, 0, 1);
+            return unless $first >> 4 == 1;
+
+            $self->write( $socket, $packet );
+        }
+        elsif ($packet->type == 0x08) { # audio
+            return unless $packet->size and bytes::length($packet->data);
+            $self->write( $socket, $packet );
+        }
+
+        $self->{received}{ $packet->number }++;
+    }
 }
 
 sub destroy {

@@ -79,13 +79,15 @@ sub serialize {
     $io->write_u8( $self->type );
     $io->write_u32( $self->obj );
 
-    if ($self->size <= $chunk_size) {
+    my $size = bytes::length($self->data);
+
+    if ($size <= $chunk_size) {
         $io->write( $self->data );
     }
     else {
-        for (my $cursor = 0; $cursor < $self->size; $cursor += $chunk_size) {
+        for (my $cursor = 0; $cursor < $size; $cursor += $chunk_size) {
             my $read = substr $self->data, $cursor, $chunk_size;
-            $read .= pack('C', 0xc3) if $cursor + bytes::length($read) < $self->size;
+            $read .= pack('C', $self->number | 0xc0) if $cursor + bytes::length($read) < $size;
 
             $io->write( $read );
         }
