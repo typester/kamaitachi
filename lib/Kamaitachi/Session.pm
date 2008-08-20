@@ -338,8 +338,9 @@ sub broadcast {
     }
     else {
         if ($packet->type == 0x09) { # video
+            return if $packet->partial;
+
             # wait for key frame
-            return if $packet->{continue};
             my $first = unpack('C', substr $packet->data, 0, 1);
             return unless $first >> 4 == 1;
 

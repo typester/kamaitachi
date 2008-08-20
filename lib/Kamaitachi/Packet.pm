@@ -54,6 +54,12 @@ has socket => (
     weak_ref => 1,
 );
 
+has partial => (
+    is      => 'rw',
+    isa     => 'Int',
+    default => sub { 0 },
+);
+
 __PACKAGE__->meta->make_immutable;
 
 sub serialize {

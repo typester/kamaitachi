@@ -171,7 +171,7 @@ sub get_packet {
     if ($header_size <= 2) {
         $bref = $self->read_u24 or return $self->reset;
         $packet->timer( $$bref );
-        $packet->{continue} = 1;
+        $packet->partial(1);
     }
     if ($header_size <= 1) {
         $bref = $self->read_u24 or return $self->reset;
@@ -179,10 +179,9 @@ sub get_packet {
         $bref = $self->read_u8 or return $self->reset;
         $packet->type( $$bref );
 
-        $packet->{continue} = 0;
-
         $packet->data(q[]);
         $packet->raw(q[]);
+        $packet->partial(0);
     }
     if ($header_size <= 0) {
         $bref = $self->read_u32 or return $self->reset;
