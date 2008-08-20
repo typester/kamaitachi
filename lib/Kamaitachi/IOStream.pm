@@ -14,11 +14,67 @@ has socket => (
     required => 1,
 );
 
+has buffer => (
+    is      => 'rw',
+    isa     => 'Str',
+    default => sub { q[] },
+);
+
+has buffer_length => (
+    is      => 'rw',
+    isa     => 'Int',
+    default => sub { 0 },
+);
+
+has cursor => (
+    is      => 'rw',
+    isa     => 'Int',
+    default => sub { 0 },
+);
+
 __PACKAGE__->meta->make_immutable;
+
+sub push {
+    my ($self, $data) = @_;
+
+    $self->{buffer} .= $data;
+    $self->{buffer_length} = bytes::length($self->buffer);
+}
+
+sub reset {
+    my $self = shift;
+
+    $self->cursor(0);
+    return;
+}
+
+sub spin {
+    my $self = shift;
+
+    my $read        = substr $self->buffer, 0, $self->cursor;
+    $self->{buffer} = substr $self->buffer, $self->cursor;
+    $self->buffer_length( bytes::length($self->buffer) );
+    $self->cursor(0);
+
+    $read;
+}
+
+sub clear {
+    my $self = shift;
+    $self->buffer(q[]);
+    $self->buffer_length(0);
+    $self->cursor(0);
+}
 
 sub read {
     my ($self, $len) = @_;
-    $self->socket->read_bytes($len);
+
+    return if $self->buffer_length < ($self->cursor + $len);
+
+    my $data = substr $self->buffer, $self->cursor, $len;
+    $self->{cursor} += $len;
+
+    \$data;
 }
 
 sub read_u8 {
@@ -95,70 +151,58 @@ sub get_packet {
     $chunk_size  ||= 128;
     $packet_list ||= [];
 
-    $self->socket->start_read;
-
-    $bref = $self->read_u8 or return;
+    $bref = $self->read_u8 or return $self->reset;
     my $first = $$bref;
 
     my $header_size = $first >> 6;
     my $amf_number  = $first & 0x3f;
 
     if ($amf_number == 0) {
-        $bref = $self->read_u8 or return;
+        $bref = $self->read_u8 or return $self->reset;
         $amf_number = $$bref;
     }
     elsif ($amf_number == 1) {
-        $bref = $self->read_u16 or return;
+        $bref = $self->read_u16 or return $self->reset;
         $amf_number = $$bref;
     }
 
     my $packet = $packet_list->[ $amf_number ] || Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
 
     if ($header_size <= 2) {
-        $bref = $self->read_u24 or return;
+        $bref = $self->read_u24 or return $self->reset;
         $packet->timer( $$bref );
     }
     if ($header_size <= 1) {
-        $bref = $self->read_u24 or return;
+        $bref = $self->read_u24 or return $self->reset;
         $packet->size( $$bref );
-        $bref = $self->read_u8 or return;
+        $bref = $self->read_u8 or return $self->reset;
         $packet->type( $$bref );
+
+        $packet->data(q[]);
+        $packet->raw(q[]);
     }
     if ($header_size <= 0) {
-        $bref = $self->read_u32 or return;
+        $bref = $self->read_u32 or return $self->reset;
         $packet->obj( $$bref );
     }
 
     my $data = q[];
     my $size = $packet->size;
 
-    if ($size > 0) {
-        if ($size <= $chunk_size) {
-            $bref = $self->read($size) or return;
-            $data = $$bref;
-        }
-        else {
-            my $read = $chunk_size;
-            $bref = $self->read($chunk_size) or return;
-            $data .= $$bref;
-
-            while ($read < $size) {
-                my $c3 = $self->read(1) or return;
-
-                my $rest  = $size - $read;
-                my $bytes = $rest > $chunk_size ? $chunk_size : $rest;
-
-                $bref = $self->read($bytes) or return;
-                $data .= $$bref;
-                $read += $bytes;
-            }
-        }
+    if (bytes::length($packet->data) < $size) {
+        $data = $packet->data;
+        $size -= bytes::length($packet->data);
     }
+
+    if ($size > 0) {
+        my $want = $size <= $chunk_size ? $size : $chunk_size;
+
+        $bref = $self->read($want) or return $self->reset;
+        $data .= $$bref;
+    }
+
     $packet->data($data);
-
-    $packet->raw( $self->socket->{readback} );
-
-    $self->socket->end_read;
+    $packet->{raw} = $self->spin;
 
     $packet_list->[ $amf_number ] = $packet;
 

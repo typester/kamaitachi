@@ -74,20 +74,25 @@ has chunk_size => (
     default => sub { 128 },
 );
 
+has io => (
+    is => 'rw',
+    isa => 'Int',
+);
+
 __PACKAGE__->meta->make_immutable;
 
 sub handle_packet_connect {
     my ($self, $socket) = @_;
+
+    my $io = $self->io;
     my $bref;
 
-    $socket->start_read;
+    $io->read(1) or return $io->reset;
 
-    $socket->read_bytes(1) or return;
-
-    $bref = $socket->read_bytes(0x600) or return;
+    $bref = $io->read(0x600) or return $io->reset;
     my $client_handshake_packet = $$bref;
 
-    $socket->end_read;
+    $io->spin;
 
     $socket->write(
         pack('C', 0x03) . $self->handshake_packet . $client_handshake_packet
@@ -98,41 +103,50 @@ sub handle_packet_connect {
 
 sub handle_packet_handshake {
     my ($self, $socket) = @_;
+    my $io = $self->io;
 
-    $socket->start_read;
-    my $bref = $socket->read_bytes(0x600) or return;
-    $socket->end_read;
+    my $bref = $io->read(0x600) or return $io->reset;
+
+    $io->spin;
 
     my $packet = $$bref;
 
     if ($packet eq $self->handshake_packet) {
+        $self->logger->debug(sprintf('handshake successful with client: %d', $self->id));
         $self->handler( \&handle_packet );
+        $self->handler->($self, $socket);
     }
     else {
         $self->logger->debug(sprintf('handshake failed with client: %d', $self->id));
+#        $socket->close;
         $self->handler( \&handle_packet ); # XXX: TODO
-        #$socket->close;
+        $self->handler->($self, $socket);
     }
 }
 
 sub handle_packet {
     my ($self, $socket) = @_;
 
-    my $packet = $socket->io->get_packet( $self->chunk_size, $self->packets ) or return;
+    while (my $packet = $self->io->get_packet( $self->chunk_size, $self->packets )) {
+        next if $packet->type == 0x14 and $packet->size > bytes::length($packet->data);
 
-    my $handler = $self->packet_handler->[ $packet->type ] || \&packet_unknown;
-    $handler->($self, $socket, $packet);
+        my $handler = $self->packet_handler->[ $packet->type ] || \&packet_unknown;
+        $handler->($self, $socket, $packet);
+    }
 }
 
 sub packet_unknown {
     my ($self, $socket, $packet) = @_;
     $self->logger->debug(sprintf('Unknown packet type: 0x%02x', $packet->type));
-    $socket->close;
+    $self->io->clear;
 }
 
 sub packet_chunksize {
     my ($self, $socket, $packet) = @_;
     $self->logger->debug("chunksize packet: not implement yet");
+    use Data::HexDump;
+    warn 'chunk';
+    warn HexDump($packet->raw);
     $socket->close;
 }
 
@@ -167,7 +181,7 @@ sub packet_client_bw {
 sub packet_audio {
     my ($self, $socket, $packet) = @_;
 
-    $self->logger->debug(sprintf('audio packet from %d', $self->id));
+#    $self->logger->debug(sprintf('audio packet from %d', $self->id));
 
     for my $id (keys %{ $self->context->{child} || {} }) {
         my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
@@ -176,7 +190,7 @@ sub packet_audio {
             $csession->write( $csocket, $packet, $packet->raw );
         }
         else {
-            $csession->write( $csocket, $packet );
+            $csession->write( $csocket, $packet, $packet->raw );
             $csession->{apublished}++;
         }
     }
@@ -185,7 +199,7 @@ sub packet_audio {
 sub packet_video {
     my ($self, $socket, $packet) = @_;
 
-    $self->logger->debug(sprintf('video packet from %d', $self->id));
+#    $self->logger->debug(sprintf('video packet from %d', $self->id));
 
     $self->{start_time} ||= time;
     warn 'sec: ', time - $self->{start_time};
@@ -245,6 +259,9 @@ sub packet_invoke {
     $self->logger->debug(sprintf('[invoke] -> %s', $func->method));
 
     if ($func->method eq 'connect') {
+#        $socket->write( pack('C*', 2,0,0,0,0,0,4,5,0,0,0,0,0,0x26,0x25,0xa0) );
+#        $socket->write( pack('C*', 2,0,0,0,0,0,5,4,0,0,0,0,0,0x26,0x25,0xa0,0x02) );
+
         my $res = $func->response(undef, {
             level       => 'status',
             code        => 'NetConnection.Connect.Success',
@@ -259,7 +276,7 @@ sub packet_invoke {
     elsif ($func->method eq 'publish') {
         my $parser = $self->context->parser;
 
-#        # set chunk_size
+        # set chunk_size
 #        my $setchunk = Kamaitachi::Packet->new(
 #            number => 2,
 #            timer  => 0,
@@ -278,6 +295,7 @@ sub packet_invoke {
                 level       => 'status',
                 code        => 'NetStream.Publish.Start',
                 description => '-',
+                clientid    => 1,
             }),
         );
         $self->write($socket, $onstatus);
@@ -323,7 +341,13 @@ sub packet_flv_info {
 sub write {
     my ($self, $socket, $packet, $data) = @_;
 
-#    $self->packets->[ $packet->number ] = $packet;
+#    if ($packet->isa('Kamaitachi::Packet::Function')) {
+#        $self->packets->[ $packet->packet->number ] = $packet->packet;
+#    }
+#    else {
+#        $self->packets->[ $packet->number ] = $packet;
+#    }
+
     $socket->write( $data || $packet->serialize($self->chunk_size) );
 }
 

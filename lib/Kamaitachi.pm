@@ -37,6 +37,12 @@ has parser => (
     },
 );
 
+has buffer_size => (
+    is      => 'rw',
+    isa     => 'Int',
+    default => sub { 8192 },
+);
+
 sub BUILD {
     my $self = shift;
 
@@ -69,7 +75,16 @@ sub BUILD {
                 context       => $self,
                 session       => $session,
                 on_read_ready => sub {
-                    $session->handler->( $session, shift );
+                    my $socket = shift;
+
+                    my $bref = $socket->read( $self->buffer_size );
+                    unless (defined $bref) {
+                        $socket->close;
+                        return;
+                    }
+
+                    $session->io->push($$bref);
+                    $session->handler->( $session, $socket );
                 },
             );
         }
