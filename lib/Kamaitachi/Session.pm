@@ -144,6 +144,7 @@ sub handle_packet {
     my ($self, $socket) = @_;
 
     while (my $packet = $self->io->get_packet( $self->chunk_size, $self->packets )) {
+        $self->bytes_read( bytes::length($packet->raw) );
         next if $packet->type == 0x14 and $packet->size > bytes::length($packet->data);
 
         my $handler = $self->packet_handler->[ $packet->type ] || \&packet_unknown;
@@ -159,16 +160,17 @@ sub packet_unknown {
 
 sub packet_chunksize {
     my ($self, $socket, $packet) = @_;
-    $self->logger->debug("chunksize packet: not implement yet");
-    use Data::HexDump;
-    warn 'chunk';
-    warn HexDump($packet->raw);
-    $socket->close;
+    $self->chunk_size( unpack('N', $packet->data) );
 }
 
 sub packet_bytes_read {
     my ($self, $socket, $packet) = @_;
+
     $self->logger->debug("bytes_read packet: not implement yet");
+
+    use Data::HexDump;
+    warn HexDump($packet->raw);
+
 #    $socket->close;
 }
 
@@ -197,6 +199,7 @@ sub packet_audio {
 
     for my $id (keys %{ $self->context->{child} || {} }) {
         my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
+        $csession->set_chunk_size($self->chunk_size) unless $self->chunk_size == $csession->chunk_size;
         $csession->broadcast( $csocket, $packet );
     }
 }
@@ -208,6 +211,7 @@ sub packet_video {
 
     for my $id (keys %{ $self->context->{child} || {} }) {
         my ($csession, $csocket) = @{ $self->context->{child}{$id} || [] };
+        $csession->set_chunk_size($self->chunk_size) unless $self->chunk_size == $csession->chunk_size;
         $csession->broadcast( $csocket, $packet );
     }
 }
@@ -268,17 +272,6 @@ sub packet_invoke {
     elsif ($func->method eq 'publish') {
         my $parser = $self->context->parser;
 
-        # set chunk_size
-#        my $setchunk = Kamaitachi::Packet->new(
-#            number => 2,
-#            timer  => 0,
-#            type   => 1,
-#            data   => pack('N', 4096),
-#            obj    => 0,
-#        );
-#        $self->write( $socket, $setchunk );
-#        $self->chunk_size(4096);
-
         my $onstatus = Kamaitachi::Packet->new(
             number => 4,
             type   => 0x14,
@@ -295,14 +288,6 @@ sub packet_invoke {
     elsif ($func->method eq 'play') {
         warn 'play: ', $func->args->[1];
         my $parser = $self->context->parser;
-
-#        my $set_chunk_size = Kamaitachi::Packet->new(
-#            number => 2,
-#            type   => 1,
-#            data   => pack('N', 4096),
-#        );
-#        $self->write($socket, $set_chunk_size);
-#        $self->chunk_size(4096);
 
         # aaa bbb
         my $aaa = Kamaitachi::Packet->new(
@@ -328,7 +313,7 @@ sub packet_invoke {
                 code        => 'NetStream.Play.Reset',
                 description => '-',
                 clientid    => 1,
-            }),
+             }),
         );
         $self->write($socket, $onstatus);
 
@@ -341,7 +326,7 @@ sub packet_invoke {
                 code        => 'NetStream.Play.Start',
                 description => '-',
                 clientid    => 1,
-            }),
+             }),
         );
         $self->write($socket, $onstatus2);
 
@@ -391,6 +376,29 @@ sub broadcast {
 
         $self->{received}{ $packet->number }++;
     }
+}
+
+sub bytes_read {
+    my ($self, $bytes) = @_;
+
+    my $reported = $self->{bytes_reported} ||= 0;
+
+    if ($reported + 1000 <= $bytes) {
+        $self->io->write( pack('C*', 2,0,0,0,0,0,4,3) . pack('N', $bytes) );
+        $self->{bytes_reported} = $bytes;
+    }
+}
+
+sub set_chunk_size {
+    my ($self, $chunk_size) = @_;
+
+    my $set_chunk_size = Kamaitachi::Packet->new(
+        number => 2,
+        type   => 1,
+        data   => pack('N', $chunk_size),
+    );
+    $self->io->write( $set_chunk_size->serialize );
+    $self->chunk_size($chunk_size);
 }
 
 sub destroy {

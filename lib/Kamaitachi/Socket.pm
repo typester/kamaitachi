@@ -25,6 +25,7 @@ sub new {
 
 sub context { $_[0]->{context} }
 sub session { $_[0]->{session} }
+sub closed  { $_[0]->{closed} }
 
 sub DESTROY {
     my $self = shift;
