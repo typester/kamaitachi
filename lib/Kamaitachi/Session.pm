@@ -401,11 +401,15 @@ sub set_chunk_size {
     $self->chunk_size($chunk_size);
 }
 
-sub destroy {
+sub close {
     my $self = shift;
     $self->logger->debug(sprintf("Closed client connection for %d.", $self->id));
+
     delete $self->context->sessions->[ $self->id ];
     delete $self->context->{child}{ $self->id };
+}
+
+sub destroy {
 }
 
 1;

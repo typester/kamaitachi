@@ -27,6 +27,12 @@ sub context { $_[0]->{context} }
 sub session { $_[0]->{session} }
 sub closed  { $_[0]->{closed} }
 
+sub close {
+    my $self = shift;
+    $self->session->close(@_);
+    $self->SUPER::close(@_);
+}
+
 sub DESTROY {
     my $self = shift;
     $self->session->destroy;
