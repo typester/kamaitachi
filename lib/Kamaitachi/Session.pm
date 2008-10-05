@@ -24,9 +24,14 @@ has handler => (
     default => sub { \&handle_packet_connect },
 );
 
+has service => (
+    is  => 'rw',
+    isa => 'Object',
+);
+
 has packet_handler => (
-    is => 'rw',
-    isa => 'ArrayRef',
+    is      => 'rw',
+    isa     => 'ArrayRef',
     default => sub {[
         undef,                  # 0x00
         \&packet_chunksize,     # 0x01
@@ -46,6 +51,31 @@ has packet_handler => (
         \&packet_shared_object,      # 0x13
         \&packet_invoke,             # 0x14
         \&packet_flv_info,           # 0x15
+    ]},
+);
+
+has packet_names => (
+    is      => 'rw',
+    isa     => 'ArrayRef',
+    default => sub {[
+        undef,
+        'packet_chunksize',     # 0x01
+        undef,                  # 0x02
+        'packet_bytes_read',    # 0x03
+        'packet_ping',          # 0x04
+        'packet_server_bw',     # 0x05
+        'packet_client_bw',     # 0x06
+        undef,                  # 0x07
+        'packet_audio',         # 0x08
+        'packet_video',         # 0x09
+        undef, undef, undef, undef, undef, # 0x0a - 0x0e
+        'packet_flex_stream',   # 0x0f
+        'packet_flex_shared_object', # 0x10
+        'packet_flex_message',       # 0x11
+        'packet_notify',             # 0x12
+        'packet_shared_object',      # 0x13
+        'packet_invoke',             # 0x14
+        'packet_flv_info',           # 0x15
     ]},
 );
 
@@ -122,22 +152,6 @@ sub handle_packet_handshake {
         $self->handler( \&handle_packet ); # XXX: TODO
         $self->handler->($self, $socket);
     }
-
-    # server bandwidth
-    my $server_bw = Kamaitachi::Packet->new(
-        number => 2,
-        type   => 5,
-        data   => pack('C*', 0, 0x26, 0x25, 0xa0),
-    );
-    $self->write($socket, $server_bw);
-
-    # client bandwidth
-    my $client_bw = Kamaitachi::Packet->new(
-        number => 2,
-        type   => 6,
-        data   => pack('C*', 0, 0x26, 0x25, 0xa0, 0x02),
-    );
-    $self->write($socket, $client_bw);
 }
 
 sub handle_packet {
@@ -148,7 +162,14 @@ sub handle_packet {
         next if $packet->type == 0x14 and $packet->size > bytes::length($packet->data);
 
         my $handler = $self->packet_handler->[ $packet->type ] || \&packet_unknown;
-        $handler->($self, $socket, $packet);
+        my $name    = $self->packet_names->[ $packet->type ];
+
+        if ($packet->type == 0x14 or !$name) { # invoke or unknown packet
+            $handler->($self, $socket, $packet);
+        }
+        else {
+            $self->dispatch( "on_$name", { packet => $packet } );
+        }
     }
 }
 
@@ -254,83 +275,18 @@ sub packet_invoke {
     $self->logger->debug(sprintf('[invoke] -> %s', $func->method));
 
     if ($func->method eq 'connect') {
-#        $socket->write( pack('C*', 2,0,0,0,0,0,4,5,0,0,0,0,0,0x26,0x25,0xa0) );
-#        $socket->write( pack('C*', 2,0,0,0,0,0,5,4,0,0,0,0,0,0x26,0x25,0xa0,0x02) );
-#        $socket->write( pack('C*', 2,0,0,0,0,0,4,5,0,0,0,0,0,2,0,0) );
+        my $connect_info = $func->args->[0];
+        for my $service ( @{$self->context->services} ) {
+            if ($connect_info->{app} =~ $service->[0]) {
+                $self->service( $service->[1] );
+                last;
+            }
+        }
+    }
 
-        my $res = $func->response(undef, {
-            level       => 'status',
-            code        => 'NetConnection.Connect.Success',
-            description => 'Connection succeeded.',
-        });
+    my $res = $self->dispatch('on_method_' . $func->method, { packet => $packet, function => $func });
+    if ($res) {
         $self->write( $socket, $res );
-    }
-    elsif ($func->method eq 'createStream') {
-        my $res = $func->response(undef, 1);
-        $self->write( $socket, $res );
-    }
-    elsif ($func->method eq 'publish') {
-        my $parser = $self->context->parser;
-
-        my $onstatus = Kamaitachi::Packet->new(
-            number => 4,
-            type   => 0x14,
-            obj    => 0x01000000,
-            data   => $parser->serialize('onStatus', 1, undef, {
-                level       => 'status',
-                code        => 'NetStream.Publish.Start',
-                description => '-',
-                clientid    => 1,
-            }),
-        );
-        $self->write($socket, $onstatus);
-    }
-    elsif ($func->method eq 'play') {
-        warn 'play: ', $func->args->[1];
-        my $parser = $self->context->parser;
-
-        # aaa bbb
-        my $aaa = Kamaitachi::Packet->new(
-            number => 2,
-            type   => 4,
-            data   => pack('C*', 0, 4, 0, 0, 0, 1),
-        );
-        my $bbb = Kamaitachi::Packet->new(
-            number => 2,
-            type   => 4,
-            data   => pack('C*', 0, 0, 0, 0, 0, 1),
-        );
-
-#        $self->write($socket, $aaa);
-#        $self->write($socket, $bbb);
-
-        my $onstatus = Kamaitachi::Packet->new(
-            number => 6,
-            type   => 0x14,
-            obj    => $packet->obj,
-            data   => $parser->serialize('onStatus', 1, undef, {
-                level       => 'status',
-                code        => 'NetStream.Play.Reset',
-                description => '-',
-                clientid    => 1,
-             }),
-        );
-        $self->write($socket, $onstatus);
-
-        my $onstatus2 = Kamaitachi::Packet->new(
-            number => 6,
-            type   => 0x14,
-            obj    => $packet->obj,
-            data   => $parser->serialize('onStatus', 1, undef, {
-                level       => 'status',
-                code        => 'NetStream.Play.Start',
-                description => '-',
-                clientid    => 1,
-             }),
-        );
-        $self->write($socket, $onstatus2);
-
-        $self->context->{child}{ $self->id } = [$self, $socket];
     }
 }
 
@@ -399,6 +355,16 @@ sub set_chunk_size {
     );
     $self->io->write( $set_chunk_size->serialize );
     $self->chunk_size($chunk_size);
+}
+
+sub dispatch {
+    my ($self, $name, @args) = @_;
+    my $service = $self->service or return;
+
+    if ($service->can($name)) {
+        return $service->$name( $self, @args );
+    }
+    return;
 }
 
 sub close {

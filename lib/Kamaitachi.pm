@@ -10,6 +10,8 @@ use Socket qw/IPPROTO_TCP TCP_NODELAY SOCK_STREAM/;
 use Danga::Socket;
 use Danga::Socket::Callback;
 use Data::AMF;
+use Text::Glob qw/glob_to_regex/;
+use Tie::IxHash;
 
 use Kamaitachi::Socket;
 use Kamaitachi::Session;
@@ -41,6 +43,12 @@ has buffer_size => (
     is      => 'rw',
     isa     => 'Int',
     default => sub { 8192 },
+);
+
+has services => (
+    is      => 'rw',
+    isa     => 'ArrayRef',
+    default => sub { [] },
 );
 
 sub BUILD {
@@ -89,6 +97,19 @@ sub BUILD {
             );
         }
     );
+}
+
+sub register_services {
+    my ($self, @args) = @_;
+
+    local $Text::Glob::strict_wildcard_slash = 0;
+
+    while (@args) {
+        my $key   = shift @args;
+        my $class = shift @args;
+
+        push @{ $self->services }, [ glob_to_regex($key), $class->new ];
+    }
 }
 
 sub run {
