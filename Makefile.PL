@@ -9,6 +9,7 @@ requires 'MooseX::LogDispatch';
 requires 'Data::AMF' => '0.02004';
 requires 'Danga::Socket';
 requires 'Danga::Socket::Callback';
+requires 'Text::Glob';
 
 use_test_base;
 auto_include;

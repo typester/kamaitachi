@@ -11,7 +11,6 @@ use Danga::Socket;
 use Danga::Socket::Callback;
 use Data::AMF;
 use Text::Glob qw/glob_to_regex/;
-use Tie::IxHash;
 
 use Kamaitachi::Socket;
 use Kamaitachi::Session;
