@@ -60,7 +60,7 @@ has partial => (
     default => sub { 0 },
 );
 
-__PACKAGE__->meta->make_immutable;
+no Moose;
 
 sub serialize {
     my ($self, $chunk_size) = @_;
@@ -105,15 +105,11 @@ sub serialize {
 sub function {
     my $self = shift;
 
-    my ($method, $id, @args) = $self->socket->context->parser->deserialize($self->data);
-
-    Kamaitachi::Packet::Function->new(
-        method => $method,
-        id     => $id,
-        args   => \@args,
+    Kamaitachi::Packet::Function->new_from_packet(
         packet => $self,
+        parser => $self->socket->context->parser
     );
 }
 
-1;
+__PACKAGE__->meta->make_immutable;
 

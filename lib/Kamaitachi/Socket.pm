@@ -33,9 +33,4 @@ sub close {
     $self->SUPER::close(@_);
 }
 
-sub DESTROY {
-    my $self = shift;
-    $self->session->destroy;
-}
-
 1;

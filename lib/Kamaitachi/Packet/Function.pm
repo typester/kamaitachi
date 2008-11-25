@@ -1,70 +1,86 @@
 package Kamaitachi::Packet::Function;
 use Moose;
 
-use Kamaitachi::Packet;
+use Data::AMF;
+
+extends 'Kamaitachi::Packet';
 
 has method => (
     is       => 'rw',
     isa      => 'Str',
-    required => 1,
 );
 
 has id => (
     is       => 'rw',
     isa      => 'Int',
-    required => 1,
 );
 
 has args => (
     is      => 'rw',
     isa     => 'ArrayRef',
     lazy    => 1,
-    default => sub { {} },
+    default => sub { [] },
 );
 
-has packet => (
-    is       => 'rw',
-    isa      => 'Object',
-    weak_ref => 1,
+has parser => (
+    is      => 'rw',
+    isa     => 'Object',
+    lazy    => 1,
+    default => sub {
+        Data::AMF->new;
+    }
 );
 
-has context => (
-    is       => 'rw',
-    isa      => 'Object',
-    weak_ref => 1,
-    lazy     => 1,
-    default  => sub {
-        my $self = shift;
-        $self->packet->socket->context;
-    },
-);
+no Moose;
 
-__PACKAGE__->meta->make_immutable;
+sub new_from_packet {
+    my $class = shift;
+    my $args  = @_ > 1 ? {@_} : $_[0];
+
+    my $packet = $args->{packet}
+        or confess 'require packet';
+
+    my $self = $class->new(
+        %$packet,
+        %$args,
+    );
+
+    my ($method, $id, @args);
+    eval {
+        ($method, $id, @args) = $self->parser->deserialize($packet->data);
+    };
+    if ($@) {
+        return;
+    }
+
+    $self->{method} = $method;
+    $self->{id}     = $id;
+    $self->{args}   = \@args;
+
+    $self;
+}
 
 sub response {
     my ($self, @obj) = @_;
 
     Kamaitachi::Packet::Function->new(
+        %$self,
         method => '_result',
-        id     => $self->id,
         args   => \@obj,
-        packet => $self->packet,
     );
 }
 
 sub serialize {
     my $self = shift;
 
-    my $parser = $self->context->parser;
-
-    my $data = $parser->serialize(
+    my $data = $self->parser->serialize(
         $self->method,
         $self->id,
         @{ $self->args },
     );
 
     my $packet = Kamaitachi::Packet->new(
-        %{ $self->packet },
+        %$self,
         size => bytes::length($data),
         data => $data,
     );
@@ -73,4 +89,3 @@ sub serialize {
 };
 
 1;
-

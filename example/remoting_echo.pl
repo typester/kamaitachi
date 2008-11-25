@@ -8,23 +8,15 @@ use Kamaitachi;
 
 {
     package Service::Echo;
-    use base 'Kamaitachi::Service';
+    use Moose;
 
-    sub on_method_connect {
-        my ($self, $session, $arg) = @_;
+    extends 'Kamaitachi::Service';
 
-        $arg->{function}->response(undef, {
-            level       => 'status',
-            code        => 'NetConnection.Connect.Success',
-            description => 'Connection succeeded.',
-        });
-    }
+    with 'Kamaitachi::Service::AutoConnect';
 
-    sub on_method_echo {
-        my ($self, $session, $arg) = @_;
-
-        my $fn = $arg->{function};
-        $fn->response( $fn->args );
+    sub on_invoke_echo {
+        my ($self, $session, $req) = @_;
+        $req->response(@{ $req->args });
     }
 }
 
@@ -32,5 +24,4 @@ my $kamaitachi = Kamaitachi->new;
 $kamaitachi->register_services(
     '*' => 'Service::Echo',
 );
-
 $kamaitachi->run;

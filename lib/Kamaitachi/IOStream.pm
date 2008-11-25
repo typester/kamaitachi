@@ -141,6 +141,12 @@ sub read_utf8_long {
 
 sub write {
     my ($self, $data) = @_;
+
+    if (ref $data) {
+        confess qq{Can't write this object: "@{[ ref $data ]}"} unless $data->can('serialize');
+        $data = $data->serialize;
+    }
+
     $self->socket->write($data);
 }
 

@@ -50,6 +50,8 @@ has services => (
     default => sub { [] },
 );
 
+no Moose;
+
 sub BUILD {
     my $self = shift;
 
@@ -91,7 +93,7 @@ sub BUILD {
                     }
 
                     $session->io->push($$bref);
-                    $session->handler->( $session, $socket );
+                    $session->handler->( $session );
                 },
             );
         }
@@ -146,4 +148,5 @@ LICENSE file included with this module.
 
 =cut
 
-1;
+__PACKAGE__->meta->make_immutable;
+
