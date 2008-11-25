@@ -50,7 +50,8 @@ has packet_handler => (
         \&packet_notify,             # 0x12
         \&packet_shared_object,      # 0x13
         \&packet_invoke,             # 0x14
-        \&packet_flv_info,           # 0x15
+        undef,                       # 0x15
+        \&packet_flv_data,           # 0x16
     ]},
 );
 
@@ -75,7 +76,8 @@ has packet_names => (
         'packet_notify',             # 0x12
         'packet_shared_object',      # 0x13
         'packet_invoke',             # 0x14
-        'packet_flv_info',           # 0x15
+        undef,                       # 0x15
+        'packet_flv_data',           # 0x16
     ]},
 );
 
@@ -109,7 +111,7 @@ has io => (
     isa => 'Int',
 );
 
-__PACKAGE__->meta->make_immutable;
+no Moose;
 
 sub handle_packet_connect {
     my ($self, $socket) = @_;
@@ -290,7 +292,7 @@ sub packet_invoke {
     }
 }
 
-sub packet_flv_info {
+sub packet_flv_data {
     my ($self, $socket, $packet) = @_;
     $self->logger->debug("flv info packet: not implement yet");
     $socket->close;
@@ -373,10 +375,11 @@ sub close {
 
     delete $self->context->sessions->[ $self->id ];
     delete $self->context->{child}{ $self->id };
+
+    $self->dispatch( on_close => $self->id );
 }
 
 sub destroy {
 }
 
-1;
-
+__PACKAGE__->meta->make_immutable;
