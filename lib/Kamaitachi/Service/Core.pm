@@ -14,6 +14,7 @@ has _read_bytes => (
 # chunk size handler
 before 'on_packet_chunk_size' => sub {
     my ($self, $session, $packet) = @_;
+    warn 'Change chunk size';
     $session->chunk_size( unpack('N', $packet->data) );
 };
 
@@ -39,15 +40,15 @@ before 'on_packet_ping' => sub {
 before "on_packet_$_" => sub {
     my ($self, $session, $packet) = @_;
 
-    my $old = $self->_read_packet % (120 * 1024);
-    $self->_read_packet( $self->_read_packet + $packet->size );
-    my $new = $self->_read_packet % (120 * 1024);
+    my $old = int($self->_read_bytes / (600 * 1024));
+    $self->_read_bytes( $self->_read_bytes + $packet->size );
+    my $new = int($self->_read_bytes / (600 * 1024));
 
     if ($old < $new) {
         my $bytes_read = Kamaitachi::Packet->new(
             number => 2,
             type   => 0x03,
-            data   => pack('N', $self->_read_packet),
+            data   => pack('N', $self->_read_bytes % 2147483648), # steel from rtmpy.py
         );
 
         $session->io->write($bytes_read->serialize);

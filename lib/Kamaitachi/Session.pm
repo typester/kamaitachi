@@ -187,7 +187,7 @@ sub close {
 
     delete $self->context->sessions->[ $self->id ];
 
-    $self->dispatch( on_close => $self->id );
+    $self->dispatch( on_close => $self );
 }
 
 __PACKAGE__->meta->make_immutable;
