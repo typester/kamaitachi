@@ -66,23 +66,10 @@ has handshake_packet => (
     },
 );
 
-has packets => (
-    is      => 'rw',
-    isa     => 'ArrayRef',
-    lazy    => 1,
-    default => sub { [] },
-);
-
-has chunk_size => (
+has io => (
     is      => 'rw',
     isa     => 'Int',
-    lazy    => 1,
-    default => sub { 128 },
-);
-
-has io => (
-    is => 'rw',
-    isa => 'Int',
+    handles => ['chunk_size', 'packets'],
 );
 
 no Moose;
@@ -133,7 +120,7 @@ sub handle_packet_handshake {
 sub handle_packet {
     my ($self) = @_;
 
-    while (my $packet = $self->io->get_packet( $self->chunk_size, $self->packets )) {
+    while (my $packet = $self->io->get_packet) {
         next if $packet->type == 0x14 and $packet->size > bytes::length($packet->data);
 
         my $name = $self->packet_names->[ $packet->type ] || 'unknown';
@@ -179,6 +166,18 @@ sub dispatch {
         return $service->$name( $self, @args );
     }
     return;
+}
+
+sub set_chunk_size {
+    my ($self, $size) = @_;
+
+    my $packet = Kamaitachi::Packet->new(
+        number => 2,
+        type   => 0x1,
+        data   => pack('N', $size),
+    );
+    $self->io->write($packet);
+    $self->chunk_size( $size );
 }
 
 sub close {

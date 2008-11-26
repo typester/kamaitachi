@@ -32,6 +32,19 @@ has cursor => (
     default => sub { 0 },
 );
 
+has chunk_size => (
+    is      => 'rw',
+    isa     => 'Int',
+    default => sub { 128 },
+);
+
+has packets => (
+    is      => 'rw',
+    isa     => 'ArrayRef',
+    lazy    => 1,
+    default => sub { [] },
+);
+
 __PACKAGE__->meta->make_immutable;
 
 sub push {
@@ -144,18 +157,18 @@ sub write {
 
     if (ref $data) {
         confess qq{Can't write this object: "@{[ ref $data ]}"} unless $data->can('serialize');
-        $data = $data->serialize;
+        $data = $data->serialize($self->chunk_size);
     }
 
     $self->socket->write($data);
 }
 
 sub get_packet {
-    my ($self, $chunk_size, $packet_list) = @_;
+    my ($self) = @_;
     my $bref;
 
-    $chunk_size  ||= 128;
-    $packet_list ||= [];
+    my $chunk_size  = $self->chunk_size;
+    my $packet_list = $self->packets;
 
     $bref = $self->read_u8 or return $self->reset;
     my $first = $$bref;

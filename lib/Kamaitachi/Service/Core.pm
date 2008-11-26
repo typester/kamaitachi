@@ -14,7 +14,7 @@ has _read_bytes => (
 # chunk size handler
 before 'on_packet_chunk_size' => sub {
     my ($self, $session, $packet) = @_;
-    warn 'Change chunk size';
+    warn 'Change chunk size to ' . unpack('N', $packet->data);
     $session->chunk_size( unpack('N', $packet->data) );
 };
 
