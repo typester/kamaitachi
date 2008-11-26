@@ -34,15 +34,24 @@ before 'on_packet_ping' => sub {
         );
         $session->io->write($pong->serialize);
     }
+    elsif ($type == 0x03) {
+        my $pong = Kamaitachi::Packet->new(
+            number => $ping->number,
+            timer  => $ping->timer,
+            type   => $ping->type,
+            data   => pack('n', 0) . substr($ping->data, 2, 4),
+        );
+        $session->io->write($pong);
+    }
 };
 
 # auto response bytes read packet
 before "on_packet_$_" => sub {
     my ($self, $session, $packet) = @_;
 
-    my $old = int($self->_read_bytes / (600 * 1024));
-    $self->_read_bytes( $self->_read_bytes + $packet->size );
-    my $new = int($self->_read_bytes / (600 * 1024));
+    my $old = int($self->_read_bytes / 125000);
+    $self->_read_bytes( $self->_read_bytes + $packet->partial_data_length || $packet->size );
+    my $new = int($self->_read_bytes / 125000);
 
     if ($old < $new) {
         my $bytes_read = Kamaitachi::Packet->new(

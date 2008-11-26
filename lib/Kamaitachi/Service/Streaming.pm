@@ -9,7 +9,7 @@ with 'Kamaitachi::Service::ChildHandler',
 has stream_chunk_size => (
     is      => 'rw',
     isa     => 'Int',
-    default => sub { 4096 },
+    default => sub { 0x1000 },
 );
 
 has stream_id => (
@@ -35,6 +35,32 @@ has stream_info => (
     isa     => 'HashRef',
     default => sub { {} },
 );
+
+before 'on_invoke_connect' => sub {
+    my ($self, $session, $req) = @_;
+
+    my $server_bw = Kamaitachi::Packet->new(
+        number => 2,
+        type   => 0x05,
+        data   => pack('N', 2500000),
+    );
+
+    my $client_bw = Kamaitachi::Packet->new(
+        number => 2,
+        type   => 0x06,
+        data   => pack('N', 2500000) . pack('C', 2),
+    );
+
+    my $unknown_ping = Kamaitachi::Packet->new(
+        number => 2,
+        type   => 0x04,
+        data   => "\0" x 6,
+    );
+
+    $session->io->write( $server_bw );
+    $session->io->write( $client_bw );
+    $session->io->write( $unknown_ping );
+};
 
 sub on_invoke_createStream {
     my ($self, $session, $req) = @_;

@@ -57,7 +57,25 @@ has socket => (
 has partial => (
     is      => 'rw',
     isa     => 'Int',
+    lazy    => 1,
     default => sub { 0 },
+);
+
+has partial_data => (
+    is      => 'rw',
+    isa     => 'Str',
+    lazy    => 1,
+    default => sub { q[] },
+);
+
+has partial_data_length => (
+    is      => 'rw',
+    isa     => 'Int',
+    lazy    => 1,
+    default => sub {
+        my $self = shift;
+        bytes::length( $self->partial_data );
+    },
 );
 
 no Moose;

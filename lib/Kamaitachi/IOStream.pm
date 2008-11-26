@@ -206,7 +206,8 @@ sub get_packet {
         my $want = $size <= $chunk_size ? $size : $chunk_size;
 
         $bref = $self->read($want) or return $self->reset;
-        $data .= $$bref;
+        $packet->partial_data( $$bref );
+        $data .= $packet->partial_data;
     }
 
     $packet->data($data);
