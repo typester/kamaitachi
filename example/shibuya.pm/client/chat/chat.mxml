@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" creationComplete="init()">
+    <mx:Script source="chat.as"/>
+    <mx:Panel title="chat remoting sample" paddingTop="10" paddingBottom="10" paddingLeft="10" paddingRight="10">
+        <mx:HBox>
+            <mx:TextInput id="input" width="120"/>
+            <mx:Button label="send" click="send()"/>
+        </mx:HBox>
+        <mx:TextArea id="result" width="400" height="200" text=""/>
+        <mx:Label id="status" text="Connecting..."/>
+    </mx:Panel>
+</mx:Application>
