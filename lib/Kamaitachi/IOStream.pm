@@ -160,7 +160,7 @@ sub write {
         $data = $data->serialize($self->chunk_size);
     }
 
-    $self->socket->write($data);
+    $self->socket->write($data) if $self->socket;
 }
 
 sub get_packet {
