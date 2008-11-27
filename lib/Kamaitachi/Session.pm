@@ -150,6 +150,16 @@ sub packet_invoke {
                 last;
             }
         }
+
+        unless ($self->service) {
+            my $res = $func_packet->response(undef, {
+                level       => 'error',
+                code        => 'NetConnection.Connect.InvalidApp',
+                description => '-',
+            });
+            $self->io->write( $res );
+            return;
+        }
     }
 
     my $res = $self->dispatch('on_invoke_' . $func_packet->method, $func_packet );
