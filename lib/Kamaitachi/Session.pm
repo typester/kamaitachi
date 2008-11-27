@@ -163,7 +163,7 @@ sub packet_invoke {
     }
 
     my $res = $self->dispatch('on_invoke_' . $func_packet->method, $func_packet );
-    if ($res) {
+    if (defined $res and blessed($res) =~ /^Kamaitachi::Packet/) {
         $self->io->write( $res );
     }
 }

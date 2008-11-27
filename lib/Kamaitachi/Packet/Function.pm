@@ -12,7 +12,7 @@ has method => (
 
 has id => (
     is       => 'rw',
-    isa      => 'Int',
+    isa      => 'Maybe[Int]',
 );
 
 has args => (
