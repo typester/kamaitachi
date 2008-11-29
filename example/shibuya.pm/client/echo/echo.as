@@ -7,7 +7,7 @@ private function init():void {
     nc = new NetConnection();
     nc.addEventListener(NetStatusEvent.NET_STATUS, status_handler);
     nc.objectEncoding = ObjectEncoding.AMF0;
-    nc.connect("rtmp://localhost/rpc/echo");
+    nc.connect("rtmp:/rpc/echo");
 }
 
 private function status_handler(event:NetStatusEvent):void {

@@ -11,7 +11,7 @@ private function init():void {
     nc.addEventListener(NetStatusEvent.NET_STATUS, status_handler);
     nc.objectEncoding = ObjectEncoding.AMF0;
     nc.client = this;
-    nc.connect("rtmp://localhost/stream/live");
+    nc.connect("rtmp:/stream/live");
 }
 
 private function status_handler(event:NetStatusEvent):void {
