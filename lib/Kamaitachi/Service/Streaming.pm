@@ -107,7 +107,12 @@ sub on_invoke_play {
     $self->stream_child_session->[ $session->id ] = $name;
     $self->stream_info->{ $name }{child}{ $session->id } = [0, 0];
 
-    my $owner_session = $self->child->[ $self->stream_info->{$name}{owner} ];
+    my $owner_session = $self->child->[ $self->stream_info->{$name}{owner} ]
+        or return $self->net_stream_status({
+            level => 'error',
+            code  => 'NetStream.Play.StreamNotFound',
+        });
+
     unless ($owner_session->chunk_size == $session->chunk_size) {
         $session->set_chunk_size( $owner_session->chunk_size );
     }
