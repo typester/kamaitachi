@@ -12,3 +12,4 @@
 ^9\d_.*\.t
 ^\.git/
 ^\.shipit$
+^bugs/
