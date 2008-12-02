@@ -5,8 +5,8 @@ type: :feature
 component: kamaitachi
 release: "0.01"
 reporter: typester <typester@cpan.org>
-status: :in_progress
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-12-02 09:38:45.561388 Z
 references: []
 
@@ -20,3 +20,7 @@ log_events:
   - typester <typester@cpan.org>
   - changed status from unstarted to in_progress
   - ""
+- - 2008-12-02 13:45:10.999567 Z
+  - typester <typester@cpan.org>
+  - closed with disposition fixed
+  - done!
