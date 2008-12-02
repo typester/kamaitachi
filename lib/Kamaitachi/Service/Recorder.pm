@@ -24,7 +24,7 @@ sub record_start {
     my ($self, $session, $name, $mode, $flags) = @_;
 
     my $dir  = dir($self->record_output_dir);
-    my $file = $dir->file($name . '.' . time . '.flv');
+    my $file = $dir->file($name . '.flv');
 
     my $fh = $file->open($mode ||= 'w', $flags) or die $!;
 
