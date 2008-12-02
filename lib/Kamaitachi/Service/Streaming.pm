@@ -123,6 +123,20 @@ sub on_invoke_play {
     return;
 }
 
+sub on_invoke_pause {
+    my ($self, $session, $req) = @_;
+    
+    if ($req->args->[1]) {
+        #TODO: send NetStream.Pause.Notify packet
+    } else {
+        #TODO: send re-start and NetStream.Unpause.Notify packet
+    }
+}
+
+sub on_invoke_seek {
+    my ($self, $session, $req) = @_;
+}    
+
 before on_packet_video => sub {
     my ($self, $session, $packet) = @_;
 
