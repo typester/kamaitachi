@@ -4,7 +4,11 @@
     <mx:Panel title="simple live play example" paddingTop="10" paddingBottom="10" paddingLeft="10" paddingRight="10">
         <mx:HBox>
             <mx:TextInput id="input" width="120"/>
-            <mx:Button id="play_button" label="play" click="start_play()"/>
+            <mx:Button id="play_button" label="play" click="start_play()" enabled="true"/>
+            <mx:Button id="pause_button" label="pause" click="pause_play()" enabled="true"/>
+            <mx:Button id="resume_button" label="resume" click="resume_play()" enabled="true"/>
+            <mx:Button id="seek_button" label="seek" click="seek_play()" enabled="true"/>
+            <mx:Button id="close_button" label="close" click="close_play()" enabled="true"/>
         </mx:HBox>
         <mx:HBox id="video_container" width="320" height="240" />
         <mx:Label id="status" text="Connecting..."/>

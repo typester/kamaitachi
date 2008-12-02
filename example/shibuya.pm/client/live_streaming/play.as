@@ -32,8 +32,6 @@ private function start_play():void {
     var channel_name:String = input.text;
     if (!channel_name) return;
 
-    play_button.enabled = false;
-
     ns = new NetStream(nc);
     ns.addEventListener(NetStatusEvent.NET_STATUS, status_handler);
 
@@ -46,4 +44,20 @@ private function start_play():void {
     video_container.addChild(ui);
 
     ns.play(channel_name);
+}
+
+private function pause_play():void {
+    ns.pause();
+}
+
+private function resume_play():void {
+    ns.resume();
+}
+
+private function close_play():void {
+    ns.close();
+}
+
+private function seek_play():void {
+    ns.seek(100);
 }
