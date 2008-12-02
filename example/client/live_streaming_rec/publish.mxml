@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" creationComplete="init()">
+    <mx:Script source="publish.as"/>
+    <mx:Panel title="simple live record example" paddingTop="10" paddingBottom="10" paddingLeft="10" paddingRight="10">
+        <mx:HBox>
+            <mx:TextInput id="input" width="120"/>
+            <mx:Button id="publish_button" label="publish" click="start_publish()"/>
+            <mx:Button id="start_button" label="rec start" click="record_start()" enabled="false"/>
+            <mx:Button id="stop_button" label="rec stop" click="record_stop()" enabled="false"/>
+        </mx:HBox>
+        <mx:VideoDisplay id="video" width="320" height="240" />
+        <mx:Label id="status" text="Connecting..."/>
+    </mx:Panel>
+</mx:Application>
