@@ -75,6 +75,12 @@ sub on_invoke_closeStream {
     my ($self, $session, $req) = @_;
 }
 
+sub on_invoke_releaseStream {
+    my ($self, $session, $req) = @_;
+
+    #XXX: called from FME
+}
+
 sub on_invoke_publish  {
     my ($self, $session, $req) = @_;
 
@@ -130,7 +136,8 @@ sub on_invoke_play {
 sub on_invoke_pause {
     my ($self, $session, $req) = @_;
 
-    my ($is_pause, $position) = @{$req->args};
+    my $is_pause = $req->args->[1];
+    my $position = $req->args->[2];
 
     if ($is_pause) {
         #TODO: send NetStream.Pause.Notify packet
@@ -142,7 +149,7 @@ sub on_invoke_pause {
 sub on_invoke_seek {
     my ($self, $session, $req) = @_;
 
-    my $position = $req->args->[0];
+    my $position = $req->args->[1];
     #TODO: send NetStream.Seek.Notify
 }    
 
