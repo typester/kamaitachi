@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: documents!
+desc: ""
+type: :task
+component: kamaitachi
+release: "0.01"
+reporter: typester <typester@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-02 09:38:01.337342 Z
+references: []
+
+id: e7cb99b976d9e4675dd954041ffce13e85ad9931
+log_events: 
+- - 2008-12-02 09:38:07.418563 Z
+  - typester <typester@cpan.org>
+  - created
+  - ""

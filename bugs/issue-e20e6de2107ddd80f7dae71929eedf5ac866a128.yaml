@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: recorder service
+desc: a service role for flv refording
+type: :feature
+component: kamaitachi
+release: "0.01"
+reporter: typester <typester@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-02 09:38:45.561388 Z
+references: []
+
+id: e20e6de2107ddd80f7dae71929eedf5ac866a128
+log_events: 
+- - 2008-12-02 09:38:46.513744 Z
+  - typester <typester@cpan.org>
+  - created
+  - ""
