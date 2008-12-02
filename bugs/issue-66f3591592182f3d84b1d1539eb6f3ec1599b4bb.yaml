@@ -1,5 +1,5 @@
 --- !ditz.rubyforge.org,2008-03-06/issue 
-title: implement streaming servicve
+title: implement streaming service
 desc: |-
   - on_invoke_pause
   - on_invoke_seek
@@ -19,3 +19,7 @@ log_events:
   - hidek <hide@cpan.org>
   - created
   - ""
+- - 2008-12-02 10:25:55.828629 Z
+  - typester <typester@cpan.org>
+  - edited title
+  - fixed a typo ;)
