@@ -1,0 +1,21 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: implement streaming servicve
+desc: |-
+  - on_invoke_pause
+  - on_invoke_seek
+  - on_invoke_closeStream
+type: :feature
+component: kamaitachi
+release: 
+reporter: hidek <hide@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-02 10:23:20.109594 Z
+references: []
+
+id: 66f3591592182f3d84b1d1539eb6f3ec1599b4bb
+log_events: 
+- - 2008-12-02 10:23:22.275155 Z
+  - hidek <hide@cpan.org>
+  - created
+  - ""

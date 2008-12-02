@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: more examples
+desc: video conference, recording, and port test... etc
+type: :task
+component: kamaitachi
+release: 
+reporter: hidek <hide@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-02 10:20:01.459851 Z
+references: []
+
+id: 6b390a4550070ee34bd80eac738e671a8072a350
+log_events: 
+- - 2008-12-02 10:20:02.899221 Z
+  - hidek <hide@cpan.org>
+  - created
+  - ""
