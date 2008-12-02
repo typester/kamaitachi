@@ -71,6 +71,10 @@ sub on_invoke_deleteStream {
     my ($self, $session, $req) = @_;
 }
 
+sub on_invoke_closeStream {
+    my ($self, $session, $req) = @_;
+}
+
 sub on_invoke_publish  {
     my ($self, $session, $req) = @_;
 
@@ -125,8 +129,10 @@ sub on_invoke_play {
 
 sub on_invoke_pause {
     my ($self, $session, $req) = @_;
-    
-    if ($req->args->[1]) {
+
+    my ($is_pause, $position) = @{$req->args};
+
+    if ($is_pause) {
         #TODO: send NetStream.Pause.Notify packet
     } else {
         #TODO: send re-start and NetStream.Unpause.Notify packet
@@ -135,6 +141,9 @@ sub on_invoke_pause {
 
 sub on_invoke_seek {
     my ($self, $session, $req) = @_;
+
+    my $position = $req->args->[0];
+    #TODO: send NetStream.Seek.Notify
 }    
 
 before on_packet_video => sub {
