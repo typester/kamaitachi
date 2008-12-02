@@ -109,10 +109,14 @@ sub register_services {
         my $key   = shift @args;
         my $class = shift @args;
 
-        eval qq{ use $class };
-        die $@ if $@;
+        unless (ref($class)) {
+            eval qq{ use $class };
+            die $@ if $@;
 
-        push @{ $self->services }, [ glob_to_regex($key), $class->new ];
+            $class = $class->new;
+        }
+
+        push @{ $self->services }, [ glob_to_regex($key), $class ];
     }
 }
 
