@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: implement shared object
+desc: ""
+type: :feature
+component: kamaitachi
+release: 
+reporter: typester <typester@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-02 10:11:10.326885 Z
+references: []
+
+id: 93d62d32677a6c321766a886e918254e888f98cd
+log_events: 
+- - 2008-12-02 10:11:11.055351 Z
+  - typester <typester@cpan.org>
+  - created
+  - ""
