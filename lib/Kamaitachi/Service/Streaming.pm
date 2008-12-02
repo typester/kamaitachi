@@ -137,12 +137,24 @@ sub on_invoke_pause {
     my ($self, $session, $req) = @_;
 
     my $is_pause = $req->args->[1];
-    my $position = $req->args->[2];
+    my $position = $req->args->[2]; # ignore when live streaming
+
+    my $stream      = $self->stream_child_session->[ $session->id ] or return;
+    my $stream_info = $self->stream_info->{ $stream } or return;
 
     if ($is_pause) {
-        #TODO: send NetStream.Pause.Notify packet
+        delete $stream_info->{child}{ $session->id };
+        $session->io->write( $self->net_stream_status('NetStream.Pause.Notify') );
     } else {
-        #TODO: send re-start and NetStream.Unpause.Notify packet
+        $session->io->write( $self->net_stream_status('NetStream.Unpause.Notify') );
+
+        $stream_info->{child}{ $session->id } = [ 0, 0 ];
+
+        # reset chunk_size
+        my $owner = $self->child->[ $stream_info->{owner} ];
+        if ($owner and $owner->chunk_size != $session->chunk_size) {
+            $session->set_chunk_size( $owner->chunk_size );
+        }
     }
 }
 
