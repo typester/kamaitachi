@@ -3,7 +3,11 @@ use Moose::Role;
 
 sub connect_success_response {
     return(
-        undef, {
+        {
+            fmsVer       => 'kamaitachi/' . $Kamaitachi::VERSION,
+            capabilities => 31,
+        },
+        {
             level       => 'status',
             code        => 'NetConnection.Connect.Success',
             description => 'Connection succeeded.',
