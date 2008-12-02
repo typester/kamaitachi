@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: support on demand streaming
+desc: depends on libav perl binding?
+type: :feature
+component: kamaitachi
+release: 
+reporter: hidek <hide@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-02 09:56:43.620103 Z
+references: []
+
+id: 0e8b23b89caa6a5ed83998d4498a10877ed1d66b
+log_events: 
+- - 2008-12-02 09:56:46.315863 Z
+  - hidek <hide@cpan.org>
+  - created
+  - ""
