@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: write tests
+desc: ""
+type: :task
+component: kamaitachi
+release: 
+reporter: typester <typester@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-02 09:42:32.544220 Z
+references: []
+
+id: ee203d7f63859c09c444315cc50631bec72367b0
+log_events: 
+- - 2008-12-02 09:42:33.280155 Z
+  - typester <typester@cpan.org>
+  - created
+  - ""
