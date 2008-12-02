@@ -22,7 +22,7 @@ sub on_invoke_record {
 
     if (my $stream = $self->published($session)) {
         if ($req->args->[1] eq 'start') { # ustream like interface
-            $self->record_start($session, $strem . '.' . time);
+            $self->record_start($session, $stream . '.' . time);
         }
         elsif ($req->args->[1] eq 'stop') {
             $self->record_stop($session);
