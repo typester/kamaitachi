@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: correct handshaking
+desc: implement handshake packet correctly
+type: :bugfix
+component: kamaitachi
+release: 
+reporter: typester <typester@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-02 10:46:08.605153 Z
+references: []
+
+id: 85273a09d557e423674419b0029e1db90267d3a8
+log_events: 
+- - 2008-12-02 10:46:09.461512 Z
+  - typester <typester@cpan.org>
+  - created
+  - ""
