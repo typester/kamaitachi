@@ -188,13 +188,25 @@ sub get_packet {
     my $packet = $packet_list->[ $amf_number ] || Kamaitachi::Packet->new( socket => $self->socket, number => $amf_number );
 
     if ($header_size <= 2) {
+        if ($header_size == 2 and !$packet->size) { # XXX
+            warn 'skip packet';
+            $self->clear;
+            return;
+        }
+
         $bref = $self->read_u24 or return $self->reset;
         $packet->timer( $$bref );
         $packet->partial(1);
     }
     if ($header_size <= 1) {
         $bref = $self->read_u24 or return $self->reset;
+        if ($$bref >= 100000) { # XXX: might be invalid packet...
+            warn 'skip packet, invalid size:' . $$bref;
+            $self->clear;
+            return;
+        }
         $packet->size( $$bref );
+
         $bref = $self->read_u8 or return $self->reset;
         $packet->type( $$bref );
 
