@@ -140,6 +140,7 @@ Blah blah blah.
 =head1 AUTHOR
 
 Daisuke Murase <typester@cpan.org>
+Hideo Kimura <hide@cpan.org>
 
 =head1 COPYRIGHT
 
