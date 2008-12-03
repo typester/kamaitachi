@@ -7,10 +7,23 @@ components:
 releases: 
 - !ditz.rubyforge.org,2008-03-06/release 
   name: "0.01"
-  status: :unreleased
-  release_time: 
+  status: :released
+  release_time: 2008-12-03 13:06:29.397269 Z
   log_events: 
   - - 2008-12-02 09:36:47.670468 Z
     - typester <typester@cpan.org>
     - created
     - first release
+  - - 2008-12-03 13:06:29.397281 Z
+    - typester <typester@cpan.org>
+    - released
+    - ""
+- !ditz.rubyforge.org,2008-03-06/release 
+  name: "0.02"
+  status: :unreleased
+  release_time: 
+  log_events: 
+  - - 2008-12-03 13:06:40.300824 Z
+    - typester <typester@cpan.org>
+    - created
+    - ""

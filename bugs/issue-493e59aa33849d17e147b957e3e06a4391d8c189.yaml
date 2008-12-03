@@ -3,7 +3,7 @@ title: write simple test
 desc: very very simple test for releasing
 type: :task
 component: kamaitachi
-release: "0.01"
+release: "0.02"
 reporter: typester <typester@cpan.org>
 status: :unstarted
 disposition: 
@@ -15,4 +15,12 @@ log_events:
 - - 2008-12-03 05:33:24.099117 Z
   - typester <typester@cpan.org>
   - created
+  - ""
+- - 2008-12-03 13:06:24.861055 Z
+  - typester <typester@cpan.org>
+  - unassigned from release 0.01
+  - ""
+- - 2008-12-03 13:06:58.797040 Z
+  - typester <typester@cpan.org>
+  - assigned to release 0.02 from unassigned
   - ""
