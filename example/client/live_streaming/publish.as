@@ -5,14 +5,6 @@ import flash.media.*;
 private var nc:NetConnection;
 private var ns:NetStream;
 
-private function init():void {
-    nc = new NetConnection();
-    nc.addEventListener(NetStatusEvent.NET_STATUS, status_handler);
-    nc.objectEncoding = ObjectEncoding.AMF0;
-    nc.client = this;
-    nc.connect("rtmp:/stream/live");
-}
-
 private function status_handler(event:NetStatusEvent):void {
     switch (event.info.code) {
     case "NetConnection.Connect.Success":
@@ -27,7 +19,22 @@ private function setStatus(text:String):void {
     status.text = text;
 }
 
-private function start_publish():void {
+private function connectConn():void {
+    var host_name:String = host.text;
+    if (!host_name) return; 
+    
+    nc = new NetConnection();
+    nc.addEventListener(NetStatusEvent.NET_STATUS, status_handler);
+    nc.objectEncoding = ObjectEncoding.AMF0;
+    nc.client = this;
+    nc.connect(host_name);
+}
+
+private function closeConn():void {
+    nc.close();
+}
+
+private function publishNs():void {
     var channel_name:String = input.text;
     if (!channel_name) return;
 
@@ -60,3 +67,9 @@ private function start_publish():void {
     ns.attachAudio(mic);
     ns.publish(channel_name, "live");
 }
+
+
+private function unpublishNs():void {
+    ns.publish();
+}
+

@@ -6,14 +6,6 @@ import mx.core.*;
 private var nc:NetConnection;
 private var ns:NetStream;
 
-private function init():void {
-    nc = new NetConnection();
-    nc.addEventListener(NetStatusEvent.NET_STATUS, status_handler);
-    nc.objectEncoding = ObjectEncoding.AMF0;
-    nc.client = this;
-    nc.connect("rtmp:/stream/live");
-}
-
 private function status_handler(event:NetStatusEvent):void {
     switch (event.info.code) {
     case "NetConnection.Connect.Success":
@@ -28,7 +20,22 @@ private function setStatus(text:String):void {
     status.text = text;
 }
 
-private function start_play():void {
+private function connectConn():void {
+    var host_name:String = host.text;
+    if (!host_name) return; 
+
+    nc = new NetConnection();
+    nc.addEventListener(NetStatusEvent.NET_STATUS, status_handler);
+    nc.objectEncoding = ObjectEncoding.AMF0;
+    nc.client = this;
+    nc.connect(host_name);
+}
+
+private function closeConn():void {
+    nc.close();
+}
+
+private function playNs():void {
     var channel_name:String = input.text;
     if (!channel_name) return;
 
@@ -46,18 +53,18 @@ private function start_play():void {
     ns.play(channel_name);
 }
 
-private function pause_play():void {
+private function pauseNs():void {
     ns.pause();
 }
 
-private function resume_play():void {
+private function resumeNs():void {
     ns.resume();
 }
 
-private function close_play():void {
+private function closeNs():void {
     ns.close();
 }
 
-private function seek_play():void {
+private function seekNs():void {
     ns.seek(100);
 }
