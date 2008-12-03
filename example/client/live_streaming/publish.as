@@ -68,6 +68,6 @@ private function publishNs():void {
 
 
 private function unpublishNs():void {
-    nc.close();
+    ns.close();
 }
 
