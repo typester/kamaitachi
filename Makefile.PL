@@ -4,7 +4,7 @@ all_from 'lib/Kamaitachi.pm';
 
 test_requires 'Test::More';
 
-requires 'Moose' => '0.06';
+requires 'Moose' => '0.60';
 requires 'MooseX::LogDispatch';
 requires 'Data::AMF' => '0.02004';
 requires 'Danga::Socket';
