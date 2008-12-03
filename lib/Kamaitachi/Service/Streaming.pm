@@ -51,6 +51,7 @@ sub on_invoke_createStream {
 
 sub on_invoke_deleteStream {
     my ( $self, $session, $req ) = @_;
+
 }
 
 sub on_invoke_closeStream {
@@ -60,11 +61,9 @@ sub on_invoke_closeStream {
 
     if ( $self->is_owner($session) ) {
         $self->send_status( $session, 'NetStream.Unpublish.Success' );
-        my $name = delete $self->stream_owner_session->[ $session->id ];
-        delete $self->stream_info->{$name};
         for my $child_id ( keys %{ $stream_info->{child} } ) {
             my $child_session = $self->child->[$child_id] or next;
-            $self->send_status($child_session, 'NetStream.Unpublish.Notify');
+            $self->send_status( $child_session, 'NetStream.Unpublish.Notify' );
         }
     }
     else {
@@ -86,20 +85,31 @@ sub on_invoke_publish {
     $self->logger->debug( sprintf 'start publish "%s"', $name );
 
     if ( $self->stream_info->{$name} ) {
-        return $self->send_status(
-            $session,
-            {   level => 'error',
-                code  => 'NetStream.Publish.BadName',
+        if ( $self->is_owner($session) ) {
+            my $stream_info = $self->get_stream_info($session) or return;
+            for my $child_id ( keys %{ $stream_info->{child} } ) {
+                my $child_session = $self->child->[$child_id] or next;
+                $self->send_status( $child_session,
+                    'NetStream.Publish.Notify' );
             }
-        );
+        }
+        else {
+            return $self->send_status(
+                $session,
+                {   level => 'error',
+                    code  => 'NetStream.Publish.BadName',
+                }
+            );
+        }
     }
+    else {
 
-    $self->stream_owner_session->[ $session->id ] = $name;
-    $self->stream_info->{$name} = {
-        owner => $session->id,
-        child => {},
-    };
-
+        $self->stream_owner_session->[ $session->id ] = $name;
+        $self->stream_info->{$name} = {
+            owner => $session->id,
+            child => {},
+        };
+    }
     $self->send_status( $session, 'NetStream.Publish.Start' );
 }
 
