@@ -9,11 +9,15 @@
             <mx:Button id="closeConn_button" label="close" click="closeConn()" enabled="true"/>
         </mx:HBox>
         <mx:HBox>
+            <mx:Label text="Name:"/>
             <mx:TextInput id="input" width="120"/>
             <mx:Button id="publish_button" label="publish" click="publishNs()"/>
             <mx:Button id="unpublish_button" label="unpublish" click="unpublishNs()"/>
         </mx:HBox>
         <mx:VideoDisplay id="video" width="320" height="240" />
+        <mx:VBox>
         <mx:Label id="status" text="Connecting..."/>
+        <mx:Label id="message_label" text=""/>
+        </mx:VBox>
     </mx:Panel>
 </mx:Application>

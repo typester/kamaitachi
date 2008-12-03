@@ -17,6 +17,9 @@
             <mx:Button id="close_button" label="close" click="closeNs()" enabled="true"/>
         </mx:HBox>
         <mx:HBox id="video_container" width="320" height="240" />
+        <mx:VBox>
         <mx:Label id="status" text="Connecting..."/>
+        <mx:Label id="message_label" text=""/>
+        </mx:VBox>
     </mx:Panel>
 </mx:Application>
