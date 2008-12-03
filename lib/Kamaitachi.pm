@@ -200,6 +200,21 @@ Start kamaitachi
 =cut
 
 sub run {
+    my $self = shift;
+
+    Danga::Socket->AddTimer(
+        0,
+        sub {
+            my $poll
+                = $Danga::Socket::HaveKQueue ? 'kqueue'
+                : $Danga::Socket::HaveEpoll  ? 'epoll'
+                :                              'poll';
+            $self->logger->debug(
+                "started kamaitachi port $self->{port} with $poll"
+            );
+        }
+    );
+
     Danga::Socket->EventLoop;
 }
 
