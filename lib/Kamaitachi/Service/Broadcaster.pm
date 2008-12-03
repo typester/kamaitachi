@@ -37,7 +37,7 @@ __END__
 
 =head1 NAME
 
-Kamaitachi::Service::Broadcaster - 
+Kamaitachi::Service::Broadcaster - service role to broadcast packet to others
 
 =head1 SYNOPSIS
 

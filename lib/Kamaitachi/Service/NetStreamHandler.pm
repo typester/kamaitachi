@@ -69,7 +69,7 @@ __END__
 
 =head1 NAME
 
-Kamaitachi::Service::NetStreamHandler - 
+Kamaitachi::Service::NetStreamHandler - service role to create netstream packet
 
 =head1 SYNOPSIS
 

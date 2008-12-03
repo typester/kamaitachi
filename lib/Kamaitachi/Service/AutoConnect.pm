@@ -16,7 +16,7 @@ __END__
 
 =head1 NAME
 
-Kamaitachi::Service::AutoConnect - 
+Kamaitachi::Service::AutoConnect - service role to accept all connection
 
 =head1 SYNOPSIS
 

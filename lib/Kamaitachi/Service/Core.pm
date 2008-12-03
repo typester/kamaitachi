@@ -72,7 +72,7 @@ __END__
 
 =head1 NAME
 
-Kamaitachi::Service::Core - 
+Kamaitachi::Service::Core - core service role
 
 =head1 SYNOPSIS
 
