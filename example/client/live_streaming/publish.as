@@ -53,8 +53,6 @@ private function publishNs():void {
         return;
     }
 
-    publish_button.enabled = false;
-
     // set quality
     camera.setMode(320, 240, 30);
     camera.setQuality(0, 80);
@@ -70,6 +68,6 @@ private function publishNs():void {
 
 
 private function unpublishNs():void {
-    ns.publish();
+    nc.close();
 }
 
