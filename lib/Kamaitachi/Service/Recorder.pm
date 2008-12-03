@@ -102,7 +102,7 @@ __END__
 
 =head1 NAME
 
-Kamaitachi::Service::Recorder - 
+Kamaitachi::Service::Recorder - service role to record flv
 
 =head1 SYNOPSIS
 

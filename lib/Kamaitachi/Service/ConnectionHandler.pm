@@ -3,7 +3,7 @@ use Moose::Role;
 
 =head1 NAME
 
-Kamaitachi::Service::ConnectionHandler - 
+Kamaitachi::Service::ConnectionHandler - service role to create connect response
 
 =head1 SYNOPSIS
 

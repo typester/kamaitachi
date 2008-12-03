@@ -232,7 +232,7 @@ __END__
 
 =head1 NAME
 
-Kamaitachi::Service::Streaming - 
+Kamaitachi::Service::Streaming - service role to handle media streaming
 
 =head1 SYNOPSIS
 

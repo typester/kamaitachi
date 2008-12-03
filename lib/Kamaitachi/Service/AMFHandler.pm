@@ -17,7 +17,7 @@ __END__
 
 =head1 NAME
 
-Kamaitachi::Service::AMFHandler - 
+Kamaitachi::Service::AMFHandler - service role to parse amf object
 
 =head1 SYNOPSIS
 

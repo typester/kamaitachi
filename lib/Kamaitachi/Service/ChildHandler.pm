@@ -25,7 +25,7 @@ __END__
 
 =head1 NAME
 
-Kamaitachi::Service::ChildHandler - 
+Kamaitachi::Service::ChildHandler - service role to handle clients
 
 =head1 SYNOPSIS
 
