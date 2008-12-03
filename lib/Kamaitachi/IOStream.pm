@@ -45,7 +45,23 @@ has packets => (
     default => sub { [] },
 );
 
-__PACKAGE__->meta->make_immutable;
+no Moose;
+
+=head1 NAME
+
+Kamaitachi::IOStream - RTMP stream reader/writer
+
+=head1 DESCRIPTION
+
+See L<Kamaitachi>.
+
+=head1 METHODS
+
+=head2 new
+
+=head2 push
+
+=cut
 
 sub push {
     my ($self, $data) = @_;
@@ -54,12 +70,20 @@ sub push {
     $self->{buffer_length} = bytes::length($self->buffer);
 }
 
+=head2 reset
+
+=cut
+
 sub reset {
     my $self = shift;
 
     $self->cursor(0);
     return;
 }
+
+=head2 spin
+
+=cut
 
 sub spin {
     my $self = shift;
@@ -72,12 +96,20 @@ sub spin {
     $read;
 }
 
+=head2 clear
+
+=cut
+
 sub clear {
     my $self = shift;
     $self->buffer(q[]);
     $self->buffer_length(0);
     $self->cursor(0);
 }
+
+=head2 read
+
+=cut
 
 sub read {
     my ($self, $len) = @_;
@@ -90,6 +122,10 @@ sub read {
     \$data;
 }
 
+=head2 read_u8
+
+=cut
+
 sub read_u8 {
     my $self = shift;
 
@@ -97,12 +133,20 @@ sub read_u8 {
     \unpack('C', $$bref);
 }
 
+=head2 read_u16
+
+=cut
+
 sub read_u16 {
     my $self = shift;
 
     my $data = $self->read(2) or return;
     \unpack('n', $$data);
 }
+
+=head2 read_s16
+
+=cut
 
 sub read_s16 {
     my $self = shift;
@@ -114,6 +158,10 @@ sub read_s16 {
     return \unpack('s', swap($$data));
 }
 
+=head2 read_u24
+
+=cut
+
 sub read_u24 {
     my $self = shift;
 
@@ -121,12 +169,20 @@ sub read_u24 {
     \unpack('N', "\0".$$data);
 }
 
+=head2 read_u32
+
+=cut
+
 sub read_u32 {
     my $self = shift;
 
     my $data = $self->read(4) or return;
     \unpack('N', $$data);
 }
+
+=head2 read_double
+
+=cut
 
 sub read_double {
     my $self = shift;
@@ -138,6 +194,10 @@ sub read_double {
     return \unpack('d', swap($$data));
 }
 
+=head2 read_utf8
+
+=cut
+
 sub read_utf8 {
     my $self = shift;
 
@@ -145,12 +205,20 @@ sub read_utf8 {
     my $bref = $self->read($len) or return;
 }
 
+=head2 read_utf8_long
+
+=cut
+
 sub read_utf8_long {
     my $self = shift;
 
     my $len = $self->read_u32 or return;
     my $bref = $self->read($len) or return;
 }
+
+=head2 write
+
+=cut
 
 sub write {
     my ($self, $data) = @_;
@@ -162,6 +230,10 @@ sub write {
 
     $self->socket->write($data) if $self->socket;
 }
+
+=head2 get_packet
+
+=cut
 
 sub get_packet {
     my ($self) = @_;
@@ -243,5 +315,20 @@ sub get_packet {
     $packet;
 }
 
-1;
+=head1 AUTHOR
 
+Daisuke Murase <typester@cpan.org>
+
+Hideo Kimura <hide@cpan.org>
+
+=head1 COPYRIGHT
+
+This program is free software; you can redistribute
+it and/or modify it under the same terms as Perl itself.
+
+The full text of the license can be found in the
+LICENSE file included with this module.
+
+=cut
+
+__PACKAGE__->meta->make_immutable;

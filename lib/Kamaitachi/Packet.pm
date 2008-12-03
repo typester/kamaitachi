@@ -80,6 +80,20 @@ has partial_data_length => (
 
 no Moose;
 
+=head1 NAME
+
+Kamaitachi::Packet - RTMP packet
+
+=head1 DESCRIPTION
+
+See L<Kamaitachi>.
+
+=head1 METHODS
+
+=head2 serialize
+
+=cut
+
 sub serialize {
     my ($self, $chunk_size) = @_;
     $chunk_size ||= 128;
@@ -120,6 +134,10 @@ sub serialize {
     $io->data;
 }
 
+=head2 function
+
+=cut
+
 sub function {
     my $self = shift;
 
@@ -128,6 +146,22 @@ sub function {
         parser => $self->socket->context->parser
     );
 }
+
+=head1 AUTHOR
+
+Daisuke Murase <typester@cpan.org>
+
+Hideo Kimura <hide@cpan.org>
+
+=head1 COPYRIGHT
+
+This program is free software; you can redistribute
+it and/or modify it under the same terms as Perl itself.
+
+The full text of the license can be found in the
+LICENSE file included with this module.
+
+=cut
 
 __PACKAGE__->meta->make_immutable;
 

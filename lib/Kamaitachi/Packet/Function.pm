@@ -33,6 +33,22 @@ has parser => (
 
 no Moose;
 
+=head1 NAME
+
+Kamaitachi::Packet::Function - RTMP function packet
+
+=head1 DESCRIPTION
+
+See L<Kamaitachi>.
+
+=head1 METHODS
+
+=head2 new
+
+=head2 new_from_packet
+
+=cut
+
 sub new_from_packet {
     my $class = shift;
     my $args  = @_ > 1 ? {@_} : $_[0];
@@ -60,6 +76,10 @@ sub new_from_packet {
     $self;
 }
 
+=head2 response
+
+=cut
+
 sub response {
     my ($self, @obj) = @_;
 
@@ -69,6 +89,10 @@ sub response {
         args   => \@obj,
     );
 }
+
+=head2 serialize
+
+=cut
 
 sub serialize {
     my $self = shift;
@@ -87,5 +111,21 @@ sub serialize {
 
     $packet->serialize(@_);
 };
+
+=head1 AUTHOR
+
+Daisuke Murase <typester@cpan.org>
+
+Hideo Kimura <hide@cpan.org>
+
+=head1 COPYRIGHT
+
+This program is free software; you can redistribute
+it and/or modify it under the same terms as Perl itself.
+
+The full text of the license can be found in the
+LICENSE file included with this module.
+
+=cut
 
 1;
