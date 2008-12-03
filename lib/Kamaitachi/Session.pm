@@ -74,6 +74,22 @@ has io => (
 
 no Moose;
 
+=head1 NAME
+
+Kamaitachi::Session - Kamaitachi connection handler
+
+=head1 DESCRIPTION
+
+See L<Kamaitachi>.
+
+=head1 METHODS
+
+=head2 new
+
+=head2 handle_packet_connect
+
+=cut
+
 sub handle_packet_connect {
     my ($self) = @_;
 
@@ -93,6 +109,10 @@ sub handle_packet_connect {
 
     $self->handler( \&handle_packet_handshake );
 }
+
+=head2 handle_packet_handshake
+
+=cut
 
 sub handle_packet_handshake {
     my ($self) = @_;
@@ -117,6 +137,10 @@ sub handle_packet_handshake {
     }
 }
 
+=head2 handle_packet
+
+=cut
+
 sub handle_packet {
     my ($self) = @_;
 
@@ -133,6 +157,10 @@ sub handle_packet {
         }
     }
 }
+
+=head2 packet_invoke
+
+=cut
 
 sub packet_invoke {
     my ($self, $packet) = @_;
@@ -168,6 +196,10 @@ sub packet_invoke {
     }
 }
 
+=head2 dispatch
+
+=cut
+
 sub dispatch {
     my ($self, $name, @args) = @_;
     my $service = $self->service or return;
@@ -177,6 +209,10 @@ sub dispatch {
     }
     return;
 }
+
+=head2 set_chunk_size
+
+=cut
 
 sub set_chunk_size {
     my ($self, $size) = @_;
@@ -189,6 +225,10 @@ sub set_chunk_size {
     $self->io->write($packet);
     $self->chunk_size( $size );
 }
+
+=head2 close
+
+=cut
 
 sub close {
     my $self = shift;
