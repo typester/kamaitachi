@@ -52,6 +52,64 @@ has services => (
 
 no Moose;
 
+=head1 NAME
+
+Kamaitachi - perl flash media server
+
+=head1 SYNOPSIS
+
+use Kamaitachi;
+
+    my $kamaitachi = Kamaitachi->new( port => 1935 );
+    
+    $kamaitachi->register_services(
+        'servive1' => 'Your::Service::Class1',
+        'servive2' => 'Your::Service::Class2',
+    );
+    $kamaitachi->run;
+
+=head1 DESCRIPTION
+
+Kamaitachi is perl implementation of Adobe's RTMP(Real Time Messaging Protocol).
+
+Now kamaitachi supports Remoting and MediaStreaming via RTMP. SharedObject is not implemented yet.
+
+This 0.x is development *alpha* version. API Interface and design are stil fluid.
+
+If you want to use kamaitachi, look at example directory. it contains both server script and client swf.
+
+=head1 DEVELOPMENT
+
+GitHub: http://github.com/typester/kamaitachi
+
+Issues: http://karas.unknownplace.org/ditz/kamaitachi/
+
+IRC: #kamaitachi @ chat.freenode.net
+
+=head1 METHODS
+
+=head2 new
+
+    Kamaitachi->new( %options );
+
+Create kamaitachi server object.
+
+Available option parameters are:
+
+=over 4
+
+=item port
+
+port number to listen (default 1935)
+
+=item buffer_size
+
+socket buffer size to read (default 8192)
+
+=back
+
+=cut
+
 sub BUILD {
     my $self = shift;
 
@@ -100,6 +158,19 @@ sub BUILD {
     );
 }
 
+=head2 register_services
+
+    $kamaitachi->register_services(
+        'rpc/echo'    => 'Service::Echo',
+        'rpc/chat'    => 'Service::Chat',
+        'stream/live' => 'Service::LiveStreaming',
+        'stream/rec'  => Service::LiveStreamingRecorder->new( record_output_dir => $dir ),
+    );
+
+Register own service classes.
+
+=cut
+
 sub register_services {
     my ($self, @args) = @_;
 
@@ -120,30 +191,22 @@ sub register_services {
     }
 }
 
+=head2 run
+
+    $kamaitachi->run
+
+Start kamaitachi
+
+=cut
+
 sub run {
     Danga::Socket->EventLoop;
 }
 
-=head1 NAME
-
-Kamaitachi - Module abstract (<= 44 characters) goes here
-
-=head1 SYNOPSIS
-
-  use Kamaitachi;
-  blah blah blah
-
-=head1 DESCRIPTION
-
-Stub documentation for this module was created by ExtUtils::ModuleMaker.
-It looks like the author of the extension was negligent enough
-to leave the stub unedited.
-
-Blah blah blah.
-
 =head1 AUTHOR
 
 Daisuke Murase <typester@cpan.org>
+
 Hideo Kimura <hide@cpan.org>
 
 =head1 COPYRIGHT
@@ -157,4 +220,3 @@ LICENSE file included with this module.
 =cut
 
 __PACKAGE__->meta->make_immutable;
-
