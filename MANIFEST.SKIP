@@ -13,3 +13,6 @@
 ^\.git/
 ^\.shipit$
 ^bugs/
+^\.ditz-config$
+^\.gitignore$
+\.DS_Store
