@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: implement connection timeout
+desc: ""
+type: :task
+component: kamaitachi
+release: 
+reporter: typester <typester@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-03 09:33:15.257169 Z
+references: []
+
+id: f006853f047a994b39e67dbf0f47c2ddd3494db9
+log_events: 
+- - 2008-12-03 09:33:15.817342 Z
+  - typester <typester@cpan.org>
+  - created
+  - ""
