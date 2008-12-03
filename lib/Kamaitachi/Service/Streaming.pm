@@ -4,18 +4,18 @@ use Moose::Role;
 use Kamaitachi::Packet;
 
 with 'Kamaitachi::Service::ChildHandler',
-     'Kamaitachi::Service::NetStreamHandler';
+    'Kamaitachi::Service::NetStreamHandler';
 
 has stream_chunk_size => (
     is      => 'rw',
     isa     => 'Int',
-    default => sub { 0x1000 },
+    default => sub {0x1000},
 );
 
 has stream_id => (
     is      => 'rw',
     isa     => 'Int',
-    default => sub { 0 },
+    default => sub {0},
 );
 
 has stream_owner_session => (
@@ -37,192 +37,190 @@ has stream_info => (
 );
 
 before 'on_invoke_connect' => sub {
-    my ($self, $session, $req) = @_;
+    my ( $self, $session, $req ) = @_;
 
-    my $server_bw = Kamaitachi::Packet->new(
-        number => 2,
-        type   => 0x05,
-        data   => pack('N', 2500000),
-    );
-
-    my $client_bw = Kamaitachi::Packet->new(
-        number => 2,
-        type   => 0x06,
-        data   => pack('N', 2500000) . pack('C', 2),
-    );
-
-    my $unknown_ping = Kamaitachi::Packet->new(
-        number => 2,
-        type   => 0x04,
-        data   => "\0" x 6,
-    );
-
-    $session->io->write( $server_bw );
-    $session->io->write( $client_bw );
-    $session->io->write( $unknown_ping );
+    $self->send_server_bw($session);
+    $self->send_client_bw($session);
+    $self->send_ping($session);
 };
 
 sub on_invoke_createStream {
-    my ($self, $session, $req) = @_;
-    $req->response(undef, 1);
+    my ( $self, $session, $req ) = @_;
+    $req->response( undef, 1 );
 }
 
 sub on_invoke_deleteStream {
-    my ($self, $session, $req) = @_;
+    my ( $self, $session, $req ) = @_;
 }
 
 sub on_invoke_closeStream {
-    my ($self, $session, $req) = @_;
+    my ( $self, $session, $req ) = @_;
 }
 
 sub on_invoke_releaseStream {
-    my ($self, $session, $req) = @_;
+    my ( $self, $session, $req ) = @_;
 
     #XXX: called from FME
 }
 
-sub on_invoke_publish  {
-    my ($self, $session, $req) = @_;
+sub on_invoke_publish {
+    my ( $self, $session, $req ) = @_;
 
     my $name = $req->args->[1];
-    $self->logger->debug(sprintf 'start publish "%s"', $name);
+    $self->logger->debug( sprintf 'start publish "%s"', $name );
 
-    if ($self->stream_info->{ $name }) {
-        return $self->net_stream_status({
-            level => 'error',
-            code  => 'NetStream.Publish.BadName',
-        });
+    if ( $self->stream_info->{$name} ) {
+        return $self->send_status(
+            $session,
+            {   level => 'error',
+                code  => 'NetStream.Publish.BadName',
+            }
+        );
     }
 
     $self->stream_owner_session->[ $session->id ] = $name;
-    $self->stream_info->{ $name } = {
+    $self->stream_info->{$name} = {
         owner => $session->id,
         child => {},
     };
-
-    $self->net_stream_status('NetStream.Publish.Start');
+    
+    $self->send_status( $session, 'NetStream.Publish.Start' );
 }
 
 sub on_invoke_play {
-    my ($self, $session, $req) = @_;
+    my ( $self, $session, $req ) = @_;
 
     my $name = $req->args->[1];
-    unless ($self->stream_info->{ $name }) {
-        return $self->net_stream_status({
-            level => 'error',
-            code  => 'NetStream.Play.StreamNotFound',
-        });
+    unless ( $self->stream_info->{$name} ) {
+        return $self->send_status(
+            $session,
+            {   level => 'error',
+                code  => 'NetStream.Play.StreamNotFound',
+            }
+        );
     }
 
     $self->stream_child_session->[ $session->id ] = $name;
-    $self->stream_info->{ $name }{child}{ $session->id } = [0, 0];
+    $self->stream_info->{$name}{child}{ $session->id } = [ 0, 0 ];
 
     my $owner_session = $self->child->[ $self->stream_info->{$name}{owner} ]
-        or return $self->net_stream_status({
-            level => 'error',
+        or return $self->send_status(
+        $session,
+        {   level => 'error',
             code  => 'NetStream.Play.StreamNotFound',
-        });
+        }
+        );
 
-    unless ($owner_session->chunk_size == $session->chunk_size) {
+    unless ( $owner_session->chunk_size == $session->chunk_size ) {
         $session->set_chunk_size( $owner_session->chunk_size );
     }
 
-    $session->io->write( $self->net_stream_status('NetStream.Play.Reset') );
-    $session->io->write( $self->net_stream_status('NetStream.Play.Start') );
-
-    return;
+    $self->send_ping($session);
+    $self->send_status( $session, 'NetStream.Play.Reset' );
+    $self->send_status( $session, 'NetStream.Play.Start' );
 }
 
 sub on_invoke_pause {
-    my ($self, $session, $req) = @_;
+    my ( $self, $session, $req ) = @_;
 
     my $is_pause = $req->args->[1];
-    my $position = $req->args->[2]; # ignore when live streaming
+    my $position = $req->args->[2];    # ignore when live streaming
 
-    my $stream      = $self->stream_child_session->[ $session->id ] or return;
-    my $stream_info = $self->stream_info->{ $stream } or return;
+    my $stream = $self->stream_child_session->[ $session->id ] or return;
+    my $stream_info = $self->stream_info->{$stream} or return;
 
     if ($is_pause) {
         delete $stream_info->{child}{ $session->id };
-        $session->io->write( $self->net_stream_status('NetStream.Pause.Notify') );
-    } else {
-        $session->io->write( $self->net_stream_status('NetStream.Unpause.Notify') );
+        $self->send_status( $session, 'NetStream.Pause.Notify' );
+    }
+    else {
+        $self->send_status( $session, 'NetStream.Unpause.Notify' );
 
         $stream_info->{child}{ $session->id } = [ 0, 0 ];
 
         # reset chunk_size
         my $owner = $self->child->[ $stream_info->{owner} ];
-        if ($owner and $owner->chunk_size != $session->chunk_size) {
+        if ( $owner and $owner->chunk_size != $session->chunk_size ) {
             $session->set_chunk_size( $owner->chunk_size );
         }
     }
 }
 
 sub on_invoke_seek {
-    my ($self, $session, $req) = @_;
+    my ( $self, $session, $req ) = @_;
 
     my $position = $req->args->[1];
+
     #TODO: send NetStream.Seek.Notify
-}    
+}
 
 before on_packet_video => sub {
-    my ($self, $session, $packet) = @_;
+    my ( $self, $session, $packet ) = @_;
 
     my $stream = $self->stream_owner_session->[ $session->id ]
-        or return; # XXX
+        or return;    # XXX
 
     my $initial_frame;
-    if (not $packet->partial) {
+    if ( not $packet->partial ) {
+
         # check key frame
-        my $first = unpack('C', substr $packet->data, 0, 1);
-        $initial_frame = $packet if ($first >> 4 == 1);
+        my $first = unpack( 'C', substr $packet->data, 0, 1 );
+        $initial_frame = $packet if ( $first >> 4 == 1 );
     }
 
-    for my $child_id (keys %{ $self->stream_info->{$stream}{child} }) {
+    for my $child_id ( keys %{ $self->stream_info->{$stream}{child} } ) {
         my $child_session = $self->child->[$child_id] or next;
 
-        unless ($self->stream_info->{$stream}{child}{$child_id}[0]) { # first
+        unless ( $self->stream_info->{$stream}{child}{$child_id}[0] )
+        {    # first
             next unless $initial_frame;
             $self->stream_info->{$stream}{child}{$child_id}[0]++;
-            $child_session->io->write( $initial_frame->serialize($child_session->chunk_size) );
+            $child_session->io->write(
+                $initial_frame->serialize( $child_session->chunk_size ) );
         }
         else {
-            $child_session->io->write($packet->raw);
+            $child_session->io->write( $packet->raw );
         }
     }
 };
 
 before on_packet_audio => sub {
-    my ($self, $session, $packet) = @_;
+    my ( $self, $session, $packet ) = @_;
 
     my $stream = $self->stream_owner_session->[ $session->id ]
-        or return; # XXX
+        or return;    # XXX
 
-    for my $child_id (keys %{ $self->stream_info->{$stream}{child} }) {
+    for my $child_id ( keys %{ $self->stream_info->{$stream}{child} } ) {
         my $child_session = $self->child->[$child_id] or next;
 
-        unless ($self->stream_info->{$stream}{child}{$child_id}[1]) { # first
+        unless ( $self->stream_info->{$stream}{child}{$child_id}[1] )
+        {             # first
             $self->stream_info->{$stream}{child}{$child_id}[1]++;
-            $child_session->io->write( $packet->serialize($child_session->chunk_size) );
+            $child_session->io->write(
+                $packet->serialize( $child_session->chunk_size ) );
         }
         else {
-            $child_session->io->write($packet->raw);
+            $child_session->io->write( $packet->raw );
         }
     }
 };
 
 before 'on_close' => sub {
-    my ($self, $session) = @_;
+    my ( $self, $session ) = @_;
 
-    my $owner_session_name = delete $self->stream_owner_session->[ $session->id ];
-    my $child_session_name = delete $self->stream_child_session->[ $session->id ];
+    my $owner_session_name
+        = delete $self->stream_owner_session->[ $session->id ];
+    my $child_session_name
+        = delete $self->stream_child_session->[ $session->id ];
 
     if ($owner_session_name) {
+
         # TODO client notify.
-        delete $self->stream_info->{ $owner_session_name };
+        delete $self->stream_info->{$owner_session_name};
     }
     elsif ($child_session_name) {
-        delete $self->stream_info->{ $child_session_name }{child}{ $session->id };
+        delete $self->stream_info->{$child_session_name}{child}
+            { $session->id };
     }
 };
 
