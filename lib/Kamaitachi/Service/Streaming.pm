@@ -4,7 +4,7 @@ use Moose::Role;
 use Kamaitachi::Packet;
 
 with 'Kamaitachi::Service::ChildHandler',
-    'Kamaitachi::Service::NetStreamHandler';
+     'Kamaitachi::Service::NetStreamHandler';
 
 has stream_chunk_size => (
     is      => 'rw',
@@ -83,7 +83,7 @@ sub on_invoke_publish {
         owner => $session->id,
         child => {},
     };
-    
+
     $self->send_status( $session, 'NetStream.Publish.Start' );
 }
 
@@ -223,6 +223,24 @@ before 'on_close' => sub {
             { $session->id };
     }
 };
+
+sub get_stream_name {
+    my ($self, $session) = @_;
+    my $stream = $self->stream_child_session->[ $session->id ];
+}
+
+sub get_stream_info {
+    my ($self, $session_or_name) = @_;
+    $session_or_name = $self->get_stream_name($session_or_name) unless ref $session_or_name;
+
+    my $stream_info = $self->stream_info->{ $session_or_name } or return;
+}
+
+sub is_owner {
+    my ($self, $session) = @_;
+    my $info = $self->get_stream_info($session) or return;
+    $info->{owner} == $session->id;
+}
 
 1;
 
