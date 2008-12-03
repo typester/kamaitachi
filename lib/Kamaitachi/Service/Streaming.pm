@@ -126,8 +126,7 @@ sub on_invoke_pause {
     my $is_pause = $req->args->[1];
     my $position = $req->args->[2];    # ignore when live streaming
 
-    my $stream = $self->stream_child_session->[ $session->id ] or return;
-    my $stream_info = $self->stream_info->{$stream} or return;
+    my $stream_info = $self->get_stream_info($session) or return;
 
     if ($is_pause) {
         delete $stream_info->{child}{ $session->id };
@@ -157,24 +156,22 @@ sub on_invoke_seek {
 before on_packet_video => sub {
     my ( $self, $session, $packet ) = @_;
 
-    my $stream = $self->stream_owner_session->[ $session->id ]
-        or return;    # XXX
+    my $stream_info = $self->get_stream_info($session) or return;
 
     my $initial_frame;
     if ( not $packet->partial ) {
-
         # check key frame
         my $first = unpack( 'C', substr $packet->data, 0, 1 );
         $initial_frame = $packet if ( $first >> 4 == 1 );
     }
 
-    for my $child_id ( keys %{ $self->stream_info->{$stream}{child} } ) {
+    for my $child_id ( keys %{ $stream_info->{child} } ) {
         my $child_session = $self->child->[$child_id] or next;
 
-        unless ( $self->stream_info->{$stream}{child}{$child_id}[0] )
+        unless ( $stream_info->{child}{$child_id}[0] )
         {    # first
             next unless $initial_frame;
-            $self->stream_info->{$stream}{child}{$child_id}[0]++;
+            $stream_info->{child}{$child_id}[0]++;
             $child_session->io->write(
                 $initial_frame->serialize( $child_session->chunk_size ) );
         }
@@ -187,15 +184,14 @@ before on_packet_video => sub {
 before on_packet_audio => sub {
     my ( $self, $session, $packet ) = @_;
 
-    my $stream = $self->stream_owner_session->[ $session->id ]
-        or return;    # XXX
+    my $stream_info = $self->get_stream_info($session) or return;
 
-    for my $child_id ( keys %{ $self->stream_info->{$stream}{child} } ) {
+    for my $child_id ( keys %{ $stream_info->{child} } ) {
         my $child_session = $self->child->[$child_id] or next;
 
-        unless ( $self->stream_info->{$stream}{child}{$child_id}[1] )
+        unless ( $stream_info->{child}{$child_id}[1] )
         {             # first
-            $self->stream_info->{$stream}{child}{$child_id}[1]++;
+            $stream_info->{child}{$child_id}[1]++;
             $child_session->io->write(
                 $packet->serialize( $child_session->chunk_size ) );
         }
@@ -231,7 +227,7 @@ sub get_stream_name {
 
 sub get_stream_info {
     my ($self, $session_or_name) = @_;
-    $session_or_name = $self->get_stream_name($session_or_name) unless ref $session_or_name;
+    $session_or_name = $self->get_stream_name($session_or_name) if ref $session_or_name;
 
     my $stream_info = $self->stream_info->{ $session_or_name } or return;
 }

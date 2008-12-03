@@ -50,12 +50,10 @@ sub record_stop {
 
 after "on_packet_$_" => sub {
     my ($self, $session, $packet) = @_;
+    return unless $self->is_owner($session);
     return unless $packet->size == bytes::length($packet->data);
 
     my $fh = $self->recorder_handles->[ $session->id ] or return;
-
-    my $stream = $self->stream_owner_session->[ $session->id ]
-        or return; # XXX
 
     if ($packet->type eq 0x09) {
         my $initial_frame;
