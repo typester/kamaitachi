@@ -226,7 +226,7 @@ before 'on_close' => sub {
 
 sub get_stream_name {
     my ($self, $session) = @_;
-    my $stream = $self->stream_child_session->[ $session->id ];
+    my $stream = $self->stream_owner_session->[ $session->id ] || $self->stream_child_session->[ $session->id ];
 }
 
 sub get_stream_info {
