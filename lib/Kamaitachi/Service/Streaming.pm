@@ -84,8 +84,14 @@ sub on_invoke_publish {
     my $name = $req->args->[1];
     $self->logger->debug( sprintf 'start publish "%s"', $name );
 
+    # cleanup old sessions when republish with new name
+    my $is_owner = $self->is_owner($session);
+    if ($is_owner and $self->get_stream_name($session) ne $name) {
+        delete $self->stream_info->{ $self->get_stream_name($session) };
+    }
+
     if ( $self->stream_info->{$name} ) {
-        if ( $self->is_owner($session) ) {
+        if ( $is_owner ) {
             my $stream_info = $self->get_stream_info($session) or return;
             for my $child_id ( keys %{ $stream_info->{child} } ) {
                 my $child_session = $self->child->[$child_id] or next;
