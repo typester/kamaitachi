@@ -41,7 +41,7 @@ before 'on_invoke_connect' => sub {
 
     $self->send_server_bw($session);
     $self->send_client_bw($session);
-    $self->send_ping($session);
+    $self->send_clear($session);
 };
 
 sub on_invoke_createStream {
@@ -115,7 +115,7 @@ sub on_invoke_play {
         $session->set_chunk_size( $owner_session->chunk_size );
     }
 
-    $self->send_ping($session);
+    $self->send_clear($session);
     $self->send_status( $session, 'NetStream.Play.Reset' );
     $self->send_status( $session, 'NetStream.Play.Start' );
 }

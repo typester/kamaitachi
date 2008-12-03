@@ -29,7 +29,7 @@ sub send_client_bw {
     );
 }
 
-sub send_ping {
+sub send_clear {
     my ( $self, $session ) = @_;
 
     $session->io->write(
