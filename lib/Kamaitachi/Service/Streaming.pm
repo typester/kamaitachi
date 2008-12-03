@@ -270,6 +270,12 @@ Kamaitachi::Service::Streaming - service role to handle media streaming
 
 =head2 on_invoke_seek
 
+=head2 get_stream_name
+
+=head2 get_stream_info
+
+=head2 is_owner
+
 =head1 SEE ALSO
 
 L<Kamaitachi>,
