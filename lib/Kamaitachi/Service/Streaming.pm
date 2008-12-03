@@ -4,7 +4,7 @@ use Moose::Role;
 use Kamaitachi::Packet;
 
 with 'Kamaitachi::Service::ChildHandler',
-     'Kamaitachi::Service::NetStreamHandler';
+    'Kamaitachi::Service::NetStreamHandler';
 
 has stream_chunk_size => (
     is      => 'rw',
@@ -55,6 +55,22 @@ sub on_invoke_deleteStream {
 
 sub on_invoke_closeStream {
     my ( $self, $session, $req ) = @_;
+
+    my $stream_info = $self->get_stream_info($session) or return;
+
+    if ( $self->is_owner($session) ) {
+        $self->send_status( $session, 'NetStream.Unpublish.Success' );
+        my $name = delete $self->stream_owner_session->[ $session->id ];
+        delete $self->stream_info->{$name};
+        for my $child_id ( keys %{ $stream_info->{child} } ) {
+            my $child_session = $self->child->[$child_id] or next;
+            $self->send_status($child_session, 'NetStream.Unpublish.Notify');
+        }
+    }
+    else {
+        delete $stream_info->{child}{ $session->id };
+    }
+
 }
 
 sub on_invoke_releaseStream {
@@ -160,6 +176,7 @@ before on_packet_video => sub {
 
     my $initial_frame;
     if ( not $packet->partial ) {
+
         # check key frame
         my $first = unpack( 'C', substr $packet->data, 0, 1 );
         $initial_frame = $packet if ( $first >> 4 == 1 );
@@ -168,8 +185,7 @@ before on_packet_video => sub {
     for my $child_id ( keys %{ $stream_info->{child} } ) {
         my $child_session = $self->child->[$child_id] or next;
 
-        unless ( $stream_info->{child}{$child_id}[0] )
-        {    # first
+        unless ( $stream_info->{child}{$child_id}[0] ) {    # first
             next unless $initial_frame;
             $stream_info->{child}{$child_id}[0]++;
             $child_session->io->write(
@@ -189,8 +205,7 @@ before on_packet_audio => sub {
     for my $child_id ( keys %{ $stream_info->{child} } ) {
         my $child_session = $self->child->[$child_id] or next;
 
-        unless ( $stream_info->{child}{$child_id}[1] )
-        {             # first
+        unless ( $stream_info->{child}{$child_id}[1] ) {    # first
             $stream_info->{child}{$child_id}[1]++;
             $child_session->io->write(
                 $packet->serialize( $child_session->chunk_size ) );
@@ -221,19 +236,21 @@ before 'on_close' => sub {
 };
 
 sub get_stream_name {
-    my ($self, $session) = @_;
-    my $stream = $self->stream_owner_session->[ $session->id ] || $self->stream_child_session->[ $session->id ];
+    my ( $self, $session ) = @_;
+    my $stream = $self->stream_owner_session->[ $session->id ]
+        || $self->stream_child_session->[ $session->id ];
 }
 
 sub get_stream_info {
-    my ($self, $session_or_name) = @_;
-    $session_or_name = $self->get_stream_name($session_or_name) if ref $session_or_name;
+    my ( $self, $session_or_name ) = @_;
+    $session_or_name = $self->get_stream_name($session_or_name)
+        if ref $session_or_name;
 
-    my $stream_info = $self->stream_info->{ $session_or_name } or return;
+    my $stream_info = $self->stream_info->{$session_or_name} or return;
 }
 
 sub is_owner {
-    my ($self, $session) = @_;
+    my ( $self, $session ) = @_;
     my $info = $self->get_stream_info($session) or return;
     $info->{owner} == $session->id;
 }
