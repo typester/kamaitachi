@@ -10,6 +10,7 @@ sub on_invoke_echo {
     $req->response(@{ $req->args });
 }
 
-1;
+__PACKAGE__->meta->make_immutable;
+
 
 

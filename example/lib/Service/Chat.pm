@@ -18,5 +18,4 @@ sub on_invoke_send {
     return $req->response;      # return null response
 }
 
-1;
-
+__PACKAGE__->meta->make_immutable;

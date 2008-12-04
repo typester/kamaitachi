@@ -35,4 +35,5 @@ sub published {
     my $stream = $self->stream_owner_session->[ $session->id ];
 }
 
-1;
+__PACKAGE__->meta->make_immutable;
+

@@ -27,5 +27,6 @@ around on_close => sub {
     $next->($session);
 };
 
-1;
+__PACKAGE__->meta->make_immutable;
+
 
