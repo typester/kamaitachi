@@ -12,6 +12,8 @@ sub broadcast_audience_count {
     my ($self, $session) = @_;
 
     my $count  = $self->get_stream_audience_count($session);
+    return unless defined $count;
+
     my $packet = $self->broadcast_notify_packet( onMessage => "Audience: $count" );
 
     $self->broadcast_stream_all($session, $packet);
