@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: handle multiple netstream on single netconnection
+desc: ""
+type: :bugfix
+component: kamaitachi
+release: 
+reporter: typester <typester@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-04 03:41:09.127633 Z
+references: []
+
+id: 90c8aa9da1712aa5e09a75ef83ae54a2f8c21ae8
+log_events: 
+- - 2008-12-04 03:41:09.824501 Z
+  - typester <typester@cpan.org>
+  - created
+  - ""
