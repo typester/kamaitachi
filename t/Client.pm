@@ -23,7 +23,7 @@ sub create_client {
 
     Danga::Socket::Callback->new(
         handle  => $socket,
-        context => { buf => q[] },
+        context => { io => Kamaitachi::IOStream->new( socket => $socket ) },
         %{ $callback || {} },
     );
 }
