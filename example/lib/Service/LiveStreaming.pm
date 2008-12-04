@@ -11,11 +11,12 @@ sub broadcast_audience_count {
     my ($self, $session, $req) = @_;
     
     my $stream_info = $self->get_stream_info($session) or return;
-    my $count = scalar keys %{$stream_info->{child}};
-    my $res = $self->broadcast_notify_packet( onMessage => "Audience: $count" );
-    $session->io->write($res);
-    $self->broadcast( $session => $res );
-    return $req->response;      # return null response
+
+    my $count  = scalar keys %{$stream_info->{child}};
+    my $invoke = $self->broadcast_notify_packet( onMessage => "Audience: $count" );
+
+    $session->io->write($invoke);
+    $self->broadcast( $session => $invoke );
 }
 
 after on_invoke_play => sub  {
