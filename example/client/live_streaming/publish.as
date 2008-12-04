@@ -57,7 +57,7 @@ private function publishNs():void {
     camera.setMode(320, 240, 30);
     camera.setQuality(0, 80);
     mic.setSilenceLevel(0);
-    mic.rate = 22;
+    mic.rate = 44;
 
     video.attachCamera(camera);
 
@@ -71,3 +71,6 @@ private function unpublishNs():void {
     ns.close();
 }
 
+public function onMessage(message:String):void {
+    message_label.text =  message;
+}

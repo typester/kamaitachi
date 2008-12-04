@@ -261,7 +261,7 @@ sub get_stream_info {
     my ( $self, $session_or_name ) = @_;
     $session_or_name = $self->get_stream_name($session_or_name)
         if ref $session_or_name;
-
+    return unless $session_or_name;
     my $stream_info = $self->stream_info->{$session_or_name} or return;
 }
 

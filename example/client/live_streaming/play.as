@@ -68,3 +68,7 @@ private function closeNs():void {
 private function seekNs():void {
     ns.seek(100);
 }
+
+public function onMessage(message:String):void {
+    message_label.text =  message;
+}
