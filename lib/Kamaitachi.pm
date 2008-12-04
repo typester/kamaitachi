@@ -58,8 +58,8 @@ Kamaitachi - perl flash media server
 
 =head1 SYNOPSIS
 
-use Kamaitachi;
-
+    use Kamaitachi;
+    
     my $kamaitachi = Kamaitachi->new( port => 1935 );
     
     $kamaitachi->register_services(
