@@ -17,6 +17,34 @@ sub broadcast {
     }
 }
 
+sub broadcast_stream {
+    my ($self, $session, $packet) = @_;
+
+    return unless $self->meta->does_role('Kamaitachi::Service::Streaming');
+
+    my $stream_info = $self->get_stream_info($session) or return;
+
+    for my $child_session_id (keys %{ $stream_info->{child} }  ) {
+        my $child_session = $self->child->[ $child_session_id ];
+        next unless defined $child_session;
+        $child_session->io->write($packet);
+    }
+}
+
+sub broadcast_stream_all {
+    my ($self, $session, $packet) = @_;
+
+    return unless $self->meta->does_role('Kamaitachi::Service::Streaming');
+
+    my $stream_info = $self->get_stream_info($session) or return;
+
+    for my $child_session_id ($stream_info->{owner}, keys %{ $stream_info->{child} }  ) {
+        my $child_session = $self->child->[ $child_session_id ];
+        next unless defined $child_session;
+        $child_session->io->write($packet);
+    }
+}
+
 sub broadcast_notify_packet {
     my ($self, $method, $data) = @_;
 
