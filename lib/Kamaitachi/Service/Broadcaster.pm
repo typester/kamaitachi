@@ -75,6 +75,10 @@ Kamaitachi::Service::Broadcaster - service role to broadcast packet to others
 
 =head2 broadcast
 
+=head2 broadcast_stream
+
+=head2 broadcast_stream_all
+
 =head2 broadcast_notify_packet
 
 =head1 SEE ALSO
