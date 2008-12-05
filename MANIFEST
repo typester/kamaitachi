@@ -35,6 +35,7 @@ inc/Test/Base/Filter.pm
 inc/Test/Builder.pm
 inc/Test/Builder/Module.pm
 inc/Test/More.pm
+inc/Test/TCP.pm
 lib/Kamaitachi.pm
 lib/Kamaitachi/IOStream.pm
 lib/Kamaitachi/Packet.pm
