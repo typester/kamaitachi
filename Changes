@@ -1,5 +1,8 @@
 Revision history for Perl extension Kamaitachi
 
+0.02002 2008-12-05T15:49:17+09:00
+     - just a pod fix
+
 0.02001 2008-12-05T13:27:21+09:00
      - add missing dependency, Test::TCP.
 

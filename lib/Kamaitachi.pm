@@ -2,7 +2,7 @@ package Kamaitachi;
 use 5.008001;
 use Moose;
 
-our $VERSION = '0.02001';
+our $VERSION = '0.02002';
 
 use IO::Handle;
 use IO::Socket::INET;
