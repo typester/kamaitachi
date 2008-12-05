@@ -48,6 +48,7 @@ lib/Kamaitachi/Service/ConnectionHandler.pm
 lib/Kamaitachi/Service/Core.pm
 lib/Kamaitachi/Service/NetStreamHandler.pm
 lib/Kamaitachi/Service/Recorder.pm
+lib/Kamaitachi/Service/StreamAudienceCounter.pm
 lib/Kamaitachi/Service/Streaming.pm
 lib/Kamaitachi/Session.pm
 lib/Kamaitachi/Socket.pm
@@ -57,5 +58,8 @@ MANIFEST			This list of files
 META.yml
 README
 t/00_compile.t
+t/01_connect.t
+t/02_iostream.t
+t/Client.pm
 t/pod.t
 t/pod_coverage.t
