@@ -3,7 +3,7 @@ title: write tests
 desc: ""
 type: :task
 component: kamaitachi
-release: 
+release: "0.03"
 reporter: typester <typester@cpan.org>
 status: :unstarted
 disposition: 
@@ -15,4 +15,8 @@ log_events:
 - - 2008-12-02 09:42:33.280155 Z
   - typester <typester@cpan.org>
   - created
+  - ""
+- - 2008-12-05 02:19:35.411859 Z
+  - typester <typester@cpan.org>
+  - assigned to release 0.03 from unassigned
   - ""

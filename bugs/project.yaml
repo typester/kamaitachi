@@ -20,10 +20,23 @@ releases:
     - ""
 - !ditz.rubyforge.org,2008-03-06/release 
   name: "0.02"
+  status: :released
+  release_time: 2008-12-05 02:18:28.923365 Z
+  log_events: 
+  - - 2008-12-03 13:06:40.300824 Z
+    - typester <typester@cpan.org>
+    - created
+    - ""
+  - - 2008-12-05 02:18:28.923377 Z
+    - typester <typester@cpan.org>
+    - released
+    - ""
+- !ditz.rubyforge.org,2008-03-06/release 
+  name: "0.03"
   status: :unreleased
   release_time: 
   log_events: 
-  - - 2008-12-03 13:06:40.300824 Z
+  - - 2008-12-05 02:19:05.116253 Z
     - typester <typester@cpan.org>
     - created
     - ""

@@ -6,7 +6,7 @@ desc: |-
   - on_invoke_closeStream
 type: :feature
 component: kamaitachi
-release: 
+release: "0.03"
 reporter: hidek <hide@cpan.org>
 status: :unstarted
 disposition: 
@@ -23,3 +23,7 @@ log_events:
   - typester <typester@cpan.org>
   - edited title
   - fixed a typo ;)
+- - 2008-12-05 02:20:15.835494 Z
+  - typester <typester@cpan.org>
+  - assigned to release 0.03 from unassigned
+  - ""

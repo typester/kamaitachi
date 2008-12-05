@@ -5,8 +5,8 @@ type: :task
 component: kamaitachi
 release: "0.02"
 reporter: typester <typester@cpan.org>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-12-03 05:33:23.242770 Z
 references: []
 
@@ -23,4 +23,8 @@ log_events:
 - - 2008-12-03 13:06:58.797040 Z
   - typester <typester@cpan.org>
   - assigned to release 0.02 from unassigned
+  - ""
+- - 2008-12-05 02:18:17.163047 Z
+  - typester <typester@cpan.org>
+  - closed with disposition fixed
   - ""
