@@ -50,7 +50,7 @@ __END__
 
 =head1 NAME
 
-Kamaitachi::Service::StreamingAudienceCounter - service role to count and broadcast streaming audience
+Kamaitachi::Service::StreamAudienceCounter - service role to count and broadcast streaming audience
 
 =head1 SYNOPSIS
 
