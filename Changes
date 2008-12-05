@@ -1,5 +1,8 @@
 Revision history for Perl extension Kamaitachi
 
+0.02001 2008-12-05T13:27:21+09:00
+     - add missing dependency, Test::TCP.
+
 0.02 2008-12-05T11:15:44+09:00
      - add AudienceCounter service
      - add simple connection test
