@@ -18,6 +18,10 @@ has buffer => (
     is      => 'rw',
     isa     => 'Str',
     default => sub { q[] },
+    trigger => sub {
+        my $self = shift;
+        $self->buffer_length( bytes::length($self->buffer) );
+    },
 );
 
 has buffer_length => (
@@ -66,8 +70,7 @@ See L<Kamaitachi>.
 sub push {
     my ($self, $data) = @_;
 
-    $self->{buffer} .= $data;
-    $self->{buffer_length} = bytes::length($self->buffer);
+    $self->buffer( $self->buffer . $data );
 }
 
 =head2 reset
