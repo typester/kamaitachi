@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: disconnect if connection is not RTMP
+desc: ""
+type: :feature
+component: kamaitachi
+release: 
+reporter: typester <typester@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-06 08:30:48.470167 Z
+references: []
+
+id: 690fc0111f9dda4ebadc686c4f9fefe110616be3
+log_events: 
+- - 2008-12-06 08:30:49.078419 Z
+  - typester <typester@cpan.org>
+  - created
+  - ""

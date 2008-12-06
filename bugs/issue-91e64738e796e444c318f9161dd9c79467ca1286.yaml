@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: SWFVerification
+desc: ""
+type: :feature
+component: kamaitachi
+release: 
+reporter: typester <typester@cpan.org>
+status: :unstarted
+disposition: 
+creation_time: 2008-12-06 08:30:27.375458 Z
+references: []
+
+id: 91e64738e796e444c318f9161dd9c79467ca1286
+log_events: 
+- - 2008-12-06 08:30:27.767359 Z
+  - typester <typester@cpan.org>
+  - created
+  - ""
