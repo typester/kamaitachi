@@ -234,6 +234,15 @@ sub write {
     $self->socket->write($data) if $self->socket;
 }
 
+=head2 close
+
+=cut
+
+sub close {
+    my $self = shift;
+    $self->socket->close if $self->socket;
+}
+
 =head2 get_packet
 
 =cut
