@@ -5,8 +5,8 @@ type: :bugfix
 component: kamaitachi
 release: 
 reporter: hidek <hide@cpan.org>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2008-12-05 22:36:34.993146 Z
 references: []
 
@@ -16,3 +16,9 @@ log_events:
   - hidek <hide@cpan.org>
   - created
   - ""
+- - 2008-12-08 14:00:14.809419 Z
+  - hidek <hide@cpan.org>
+  - closed with disposition fixed
+  - |-
+    I tested Flash 10 player on Firefox 3.0.4 under Ubuntu 8.10.
+    Both of publishing and playing sound worked fine.
