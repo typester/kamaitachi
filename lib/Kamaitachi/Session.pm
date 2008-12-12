@@ -68,7 +68,7 @@ has handshake_packet => (
 
 has io => (
     is      => 'rw',
-    isa     => 'Int',
+    isa     => 'Kamaitachi::IOStream',
     handles => ['chunk_size', 'packets'],
 );
 
