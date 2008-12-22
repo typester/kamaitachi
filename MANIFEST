@@ -43,6 +43,7 @@ lib/Kamaitachi/Packet/Function.pm
 lib/Kamaitachi/Service.pm
 lib/Kamaitachi/Service/AMFHandler.pm
 lib/Kamaitachi/Service/AutoConnect.pm
+lib/Kamaitachi/Service/AutoConnectACL.pm
 lib/Kamaitachi/Service/Broadcaster.pm
 lib/Kamaitachi/Service/ChildHandler.pm
 lib/Kamaitachi/Service/ConnectionHandler.pm
