@@ -90,6 +90,20 @@ sub response {
     );
 }
 
+=head2 error
+
+=cut
+
+sub error {
+    my ($self, @obj) = @_;
+
+    Kamaitachi::Packet::Function->new(
+        %$self,
+        method => '_error',
+        args   => \@obj,
+    );
+}
+
 =head2 serialize
 
 =cut
