@@ -1,5 +1,8 @@
 Revision history for Perl extension Kamaitachi
 
+0.04 2009-09-11T17:13:17+09:00
+     - fix example
+
 0.03 2008-12-22T18:14:50+09:00
      - add URL based ACL service
      - add invoke error response handler
