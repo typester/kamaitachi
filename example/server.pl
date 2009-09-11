@@ -21,7 +21,7 @@ $kamaitachi->register_services(
     'rpc/echo'    => 'Service::Echo',
     'rpc/chat'    => 'Service::Chat',
     'stream/live' => 'Service::LiveStreaming',
-    'stream/rec'  => Service::LiveStreamingRecorder->new( record_output_dir => $dir ),
+    'stream/rec'  => Service::LiveStreamingRecorder->new( output_dir => $dir ),
 );
 
 $kamaitachi->run;

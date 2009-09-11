@@ -8,14 +8,14 @@ with 'Kamaitachi::Service::AutoConnect',
      'Kamaitachi::Service::Streaming',
      'Kamaitachi::Service::Recorder';
 
-has record_output_dir => (
+has output_dir => (
     is       => 'rw',
     isa      => 'Path::Class::Dir',
     required => 1,
     coerce   => 1,
 );
 
-sub record_output_dir { shift->{record_output_dir} }
+sub record_output_dir { shift->output_dir }
 
 sub on_invoke_record {
     my ($self, $session, $req) = @_;
