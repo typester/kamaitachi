@@ -5,6 +5,7 @@ use constant ENDIAN => unpack('S', pack('C2', 0, 1)) == 1 ? 'BIG' : 'LITTLE';
 
 extends 'Data::AMF::IO';
 
+use Carp;
 use Kamaitachi::Packet;
 
 has socket => (

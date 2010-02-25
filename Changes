@@ -1,5 +1,8 @@
 Revision history for Perl extension Kamaitachi
 
+0.05 2010-02-25T10:13:40+09:00
+     - fix compile error caused latest Moose is no longer export Carp::confess in latest version
+
 0.04 2009-09-11T17:13:17+09:00
      - fix example
 

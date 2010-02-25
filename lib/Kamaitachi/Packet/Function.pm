@@ -2,6 +2,7 @@ package Kamaitachi::Packet::Function;
 use Moose;
 
 use Data::AMF;
+use Carp;
 
 extends 'Kamaitachi::Packet';
 

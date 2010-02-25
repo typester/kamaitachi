@@ -1,6 +1,7 @@
 package Kamaitachi::Service::NetStreamHandler;
 use Moose::Role;
 
+use Carp;
 use Kamaitachi::Packet;
 
 with 'Kamaitachi::Service::AMFHandler';
