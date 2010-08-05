@@ -9,6 +9,7 @@ use lib "$FindBin::Bin/lib";
 use Kamaitachi;
 
 my $kamaitachi = Kamaitachi->new;
+$kamaitachi->add_handler( port => '1935' );
 
 # setup record output directory
 use Service::LiveStreamingRecorder;

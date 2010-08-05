@@ -1,11 +1,13 @@
 package Service::Chat;
-use Moose;
+use Any::Moose;
 
 extends 'Kamaitachi::Service';
 
 with qw/Kamaitachi::Service::AutoConnect
         Kamaitachi::Service::Broadcaster
        /;
+
+no Any::Moose;
 
 sub on_invoke_send {
     my ($self, $session, $req) = @_;
@@ -15,7 +17,7 @@ sub on_invoke_send {
 
     $self->broadcast( $session => $res );
 
-    return $req->response;      # return null response
+    return $req->result;      # return null response
 }
 
 __PACKAGE__->meta->make_immutable;

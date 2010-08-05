@@ -1,16 +1,15 @@
 package Service::Echo;
-use Moose;
+use Any::Moose;
 
 extends 'Kamaitachi::Service';
 
 with 'Kamaitachi::Service::AutoConnect';
 
+no Any::Moose;
+
 sub on_invoke_echo {
     my ($self, $session, $req) = @_;
-    $req->response(@{ $req->args });
+    $req->result(@{ $req->args });
 }
 
 __PACKAGE__->meta->make_immutable;
-
-
-

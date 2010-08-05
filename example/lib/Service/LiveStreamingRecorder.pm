@@ -1,6 +1,6 @@
 package Service::LiveStreamingRecorder;
-use Moose;
-use MooseX::Types::Path::Class;
+use Any::Moose;
+use Any::Moose 'X::Types::Path::Class';
 
 extends 'Kamaitachi::Service';
 
@@ -14,6 +14,8 @@ has output_dir => (
     required => 1,
     coerce   => 1,
 );
+
+no Any::Moose;
 
 sub record_output_dir { shift->output_dir }
 
