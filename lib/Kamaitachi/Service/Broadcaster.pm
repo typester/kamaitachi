@@ -1,9 +1,7 @@
 package Kamaitachi::Service::Broadcaster;
-use Moose::Role;
+use Any::Moose '::Role';
 
-with qw/Kamaitachi::Service::ChildHandler
-        Kamaitachi::Service::AMFHandler
-       /;
+with qw/Kamaitachi::Service::ChildHandler/;
 
 use Kamaitachi::Packet::Function;
 

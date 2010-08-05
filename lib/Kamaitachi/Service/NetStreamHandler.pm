@@ -1,10 +1,8 @@
 package Kamaitachi::Service::NetStreamHandler;
-use Moose::Role;
+use Any::Moose '::Role';
 
 use Carp;
 use Kamaitachi::Packet;
-
-with 'Kamaitachi::Service::AMFHandler';
 
 sub send_server_bw {
     my ( $self, $session, $response ) = @_;
@@ -52,18 +50,20 @@ sub send_status {
     $response->{description} ||= '-';
     $response->{clientid}    ||= 1;
 
+    $session->logger->debug(sprintf '[status] %s for %d', $response->{code}, $session->id);
+
     $session->io->write(
         Kamaitachi::Packet->new(
             number => 4,
             type   => 0x14,
             obj    => 0x01000000,
-            data =>
-                $self->parser->serialize( 'onStatus', 1, undef, $response, ),
+            data   => $session->io->encode_amf( 'onStatus', 1, undef, $response, ),
         )
     );
 }
 
 1;
+
 __END__
 
 =encoding utf8

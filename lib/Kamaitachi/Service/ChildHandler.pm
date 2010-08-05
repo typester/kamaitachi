@@ -1,9 +1,8 @@
 package Kamaitachi::Service::ChildHandler;
-use Moose::Role;
+use Any::Moose '::Role';
 
 has child => (
     is      => 'rw',
-    isa     => 'ArrayRef',
     default => sub { [] },
 );
 

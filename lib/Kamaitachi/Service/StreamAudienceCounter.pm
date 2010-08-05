@@ -1,5 +1,5 @@
 package Kamaitachi::Service::StreamAudienceCounter;
-use Moose::Role;
+use Any::Moose '::Role';
 
 has stream_audience_count => (
     is      => 'rw',

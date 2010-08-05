@@ -1,37 +1,41 @@
 package Kamaitachi::Session;
-use Moose;
+use Any::Moose;
 
-use Kamaitachi::IOStream;
+use AnyEvent::Handle;
+use Scalar::Util ();
+use Try::Tiny;
 
-with 'MooseX::LogDispatch';
+use Kamaitachi::Packet;
+use Kamaitachi::Packet::Function;
 
 has id => (
+    is      => 'rw',
+    lazy    => 1,
+    default => sub { fileno($_[0]->fh) },
+);
+
+has [qw/fh proto/] => (
     is       => 'ro',
-    isa      => 'Int',
     required => 1,
 );
 
 has context => (
     is       => 'rw',
-    isa      => 'Object',
-    required => 1,
     weak_ref => 1,
+    handles  => ['logger'],
 );
 
-has handler => (
-    is      => 'rw',
-    isa     => 'CodeRef',
-    default => sub { \&handle_packet_connect },
+has io => (
+    is         => 'rw',
+    lazy_build => 1,
 );
 
 has service => (
-    is  => 'rw',
-    isa => 'Object',
+    is => 'rw',
 );
 
 has packet_names => (
     is      => 'rw',
-    isa     => 'ArrayRef',
     default => sub {[
         undef,
         'packet_chunk_size',    # 0x01
@@ -55,204 +59,155 @@ has packet_names => (
     ]},
 );
 
-has handshake_packet => (
-    is      => 'rw',
-    isa     => 'Str',
-    default => sub {
-        my $packet = q[];
-        $packet .= pack('C', int rand 0xff) for 1 .. 0x600;
-        substr $packet, 4, 4, pack('L', 0);
-        $packet;
-    },
-);
+no Any::Moose;
 
-has io => (
-    is      => 'rw',
-    isa     => 'Kamaitachi::IOStream',
-    handles => ['chunk_size', 'packets'],
-);
-
-no Moose;
-
-=head1 NAME
-
-Kamaitachi::Session - Kamaitachi connection handler
-
-=head1 DESCRIPTION
-
-See L<Kamaitachi>.
-
-=head1 METHODS
-
-=head2 new
-
-=head2 handle_packet_connect
-
-=cut
-
-sub handle_packet_connect {
+sub BUILD {
     my ($self) = @_;
 
-    my $io = $self->io;
-    my $bref;
+    $self->io->on_error(sub {
+        my ($h, $fatal, $message) = @_;
 
-    $io->read(1) or return $io->reset;
+        if ($self) {
+            $self->logger->error(sprintf '[%d] Connection error: %s', $self->id, $message);
+            $self->close;
+        }
+    });
 
-    $bref = $io->read(0x600) or return $io->reset;
-    my $client_handshake_packet = $$bref;
+    $self->io->on_eof(sub {
+        $self->close if $self;
+    });
 
-    $io->spin;
-
-    $io->write(
-        pack('C', 0x03) . $self->handshake_packet . $client_handshake_packet
+    my $packet_handler = sub { $self->packet_handler(@_) };
+    $self->io->handle_client_handshaking(
+        on_complete => sub {
+            my ($h) = @_;
+            $self->context->logger->debug(sprintf '[%d] handshake successful', $self->id);
+            $self->io->handle_rtmp_packet(
+                on_packet => $packet_handler,
+            );            
+        },
+        on_fail => sub {
+            my ($h, $reason) = @_;
+            $self->context->logger->debug(sprintf '[%d] handshake failed: %s', $self->id, $reason);
+            $self->close;
+        },
     );
+    Scalar::Util::weaken($self);
 
-    $self->handler( \&handle_packet_handshake );
+    $self->logger->debug(sprintf '[%d] Established connection', $self->id);
 }
 
-=head2 handle_packet_handshake
-
-=cut
-
-sub handle_packet_handshake {
+sub DEMOLISH {
     my ($self) = @_;
-    my $io = $self->io;
+    $self->logger->debug(sprintf '[%d] Closing connection', $self->id);
+}
 
-    my $bref = $io->read(0x600) or return $io->reset;
+sub packet_handler {
+    my ($self, $packet) = @_;
 
-    $io->spin;
+    my $name = $self->packet_names->[ $packet->type ];
+    unless (defined $name) {
+        $self->logger->debug(sprintf '[%d] unknown packet: 0x%02x', $self->id, $packet->type);
+        return;
+    }
+    #$self->logger->debug(sprintf '[%d] got packet: 0x%02x (%s)', $self->id, $packet->type, $name);
 
-    my $packet = $$bref;
-
-    if ($packet eq $self->handshake_packet) {
-        $self->logger->debug(sprintf('handshake successful with client: %d', $self->id));
-        $self->handler( \&handle_packet );
-        $self->handler->($self);
+    if ($packet->type == 0x14) {
+        $self->packet_invoke($packet) if $packet->is_full;
     }
     else {
-        $self->logger->debug(sprintf('handshake failed with client: %d', $self->id));
-#        $socket->close;
-        $self->handler( \&handle_packet ); # TODO: correct handshake impl!
-        $self->handler->($self);
+        $self->dispatch("on_$name", $packet );
     }
 }
-
-=head2 handle_packet
-
-=cut
-
-sub handle_packet {
-    my ($self) = @_;
-
-    while (my $packet = $self->io->get_packet) {
-        next if $packet->type == 0x14 and $packet->size > bytes::length($packet->data);
-
-        my $name = $self->packet_names->[ $packet->type ] || 'unknown';
-
-        if ($name eq 'packet_invoke') {
-            $self->packet_invoke($packet);
-        }
-        else {
-            $self->dispatch( "on_$name", $packet );
-        }
-    }
-}
-
-=head2 packet_invoke
-
-=cut
 
 sub packet_invoke {
     my ($self, $packet) = @_;
 
-    my $func_packet = $packet->function or return;
+    my ($method, $id, @args, $err);
+    try {
+        ($method, $id, @args) = $self->io->decode_amf($packet->data);
+    } catch {
+        $err = $_;
+    };
 
-    $self->logger->debug(sprintf('[invoke] -> %s', $func_packet->method));
+    if ($err) {
+        $self->logger->debug(sprintf '[%d] Decording AMF data failed: %s', $self->id, $err);
+        $self->close;
+        return;
+    }
+        
+    my $f = Kamaitachi::Packet::Function->new(
+        %$packet,
+        method => $method,
+        id     => $id,
+        args   => \@args,
+    );
+    $self->logger->debug(sprintf '[%d] [invoke] -> %s', $self->id, $f->method);
 
-    if ($func_packet->method eq 'connect') {
-        my $connect_info = $func_packet->args->[0];
-        for my $service ( @{$self->context->services} ) {
+    if ($f->method eq 'connect') {
+        my $connect_info = $f->args->[0];
+        for my $service (@{ $self->context->services }) {
             if ($connect_info->{app} =~ $service->[0]) {
-                $self->service( $service->[1] );
+                $self->service($service->[1]);
                 $self->dispatch( on_connect => $packet );
                 last;
             }
         }
 
-        unless ($self->service) {
-            my $res = $func_packet->response(undef, {
+        unless (defined $self->service) {
+            my $res = $f->result(undef, {
                 level       => 'error',
                 code        => 'NetConnection.Connect.InvalidApp',
                 description => '-',
             });
-            $self->io->write( $res );
+            $self->io->write($res);
             return;
         }
     }
 
-    my $res = $self->dispatch('on_invoke_' . $func_packet->method, $func_packet );
-    if (defined $res and (ref($res) || '') =~ /^Kamaitachi::Packet/) {
-        $self->io->write( $res );
+    my $res = $self->dispatch('on_invoke_' . $f->method, $f );
+    if (defined $res && Scalar::Util::blessed($res) && $res->isa('Kamaitachi::Packet')) {
+        $self->io->write($res);
     }
 }
-
-=head2 dispatch
-
-=cut
 
 sub dispatch {
     my ($self, $name, @args) = @_;
+
     my $service = $self->service or return;
 
-    if ($service->can($name)) {
-        return $service->$name( $self, @args );
+    if (my $code = $service->can($name)) {
+        return $code->( $service, $self, @args );
     }
     return;
 }
-
-=head2 set_chunk_size
-
-=cut
 
 sub set_chunk_size {
     my ($self, $size) = @_;
 
     my $packet = Kamaitachi::Packet->new(
         number => 2,
-        type   => 0x1,
+        type   => 1,
         data   => pack('N', $size),
     );
     $self->io->write($packet);
-    $self->chunk_size( $size );
+    $self->io->write_chunk_size($size);
 }
-
-=head2 close
-
-=cut
 
 sub close {
-    my $self = shift;
-    $self->logger->debug(sprintf("Closed client connection for %d.", $self->id));
-
-    delete $self->context->sessions->[ $self->id ];
-
-    $self->dispatch( on_close => $self );
+    my ($self) = @_;
+    delete $self->context->sessions->[fileno $self->fh];
 }
 
-=head1 AUTHOR
+sub _build_io {
+    my ($self) = @_;
 
-Daisuke Murase <typester@cpan.org>
+    my $io_class = 'Kamaitachi::IO::' . uc $self->proto;
+    Any::Moose::load_class($io_class);
 
-Hideo Kimura <hide@cpan.org>
-
-=head1 COPYRIGHT
-
-This program is free software; you can redistribute
-it and/or modify it under the same terms as Perl itself.
-
-The full text of the license can be found in the
-LICENSE file included with this module.
-
-=cut
+    $io_class->new( fh => $self->fh );
+}
 
 __PACKAGE__->meta->make_immutable;
+
+

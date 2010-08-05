@@ -1,5 +1,5 @@
 package Kamaitachi::Service::AutoConnectACL;
-use Moose::Role;
+use Any::Moose '::Role';
 use Text::Glob qw/glob_to_regex/;
 
 with 'Kamaitachi::Service::AutoConnect';
@@ -37,7 +37,7 @@ around on_invoke_connect => sub {
         $next->(@_);
     }
     else {
-        my $res = $req->response(undef, {
+        my $res = $req->result(undef, {
             level       => 'error',
             code        => 'NetConnection.Connect.Rejected',
             description => '-',
@@ -46,6 +46,10 @@ around on_invoke_connect => sub {
         $session->io->close;
     }
 };
+
+1;
+
+__END__
 
 =head1 NAME
 
@@ -75,6 +79,4 @@ The full text of the license can be found in the
 LICENSE file included with this module.
 
 =cut
-
-1;
 

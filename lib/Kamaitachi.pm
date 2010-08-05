@@ -1,56 +1,74 @@
 package Kamaitachi;
-use 5.008001;
-use Moose;
+use Any::Moose;
 
 our $VERSION = '0.05';
 
-use IO::Handle;
-use IO::Socket::INET;
-use Socket qw/IPPROTO_TCP TCP_NODELAY SOCK_STREAM/;
-use Danga::Socket;
-use Danga::Socket::Callback;
+with 'Kamaitachi::Logger';
+
+use AnyEvent;
+
 use Data::AMF;
 use Text::Glob qw/glob_to_regex/;
 
-use Kamaitachi::Socket;
-use Kamaitachi::Session;
-
-with 'MooseX::LogDispatch';
-
-has port => (
-    is      => 'rw',
-    isa     => 'Int',
-    default => sub { 1935 },
-);
+use Kamaitachi::ConnectionHandler;
 
 has sessions => (
     is      => 'rw',
-    isa     => 'ArrayRef',
     default => sub { [] },
-);
-
-has parser => (
-    is      => 'rw',
-    isa     => 'Object',
-    lazy    => 1,
-    default => sub {
-        Data::AMF->new( version => 0 ),
-    },
-);
-
-has buffer_size => (
-    is      => 'rw',
-    isa     => 'Int',
-    default => sub { 8192 },
 );
 
 has services => (
     is      => 'rw',
-    isa     => 'ArrayRef',
     default => sub { [] },
 );
 
-no Moose;
+has connection_handlers => (
+    is      => 'rw',
+    default => sub { [] },
+);
+
+has cv => (
+    is      => 'rw',
+    lazy    => 1,
+    default => sub {
+        AnyEvent->condvar;
+    },
+);
+
+no Any::Moose;
+
+sub add_handler {
+    my ($self, %options) = @_;
+    push @{ $self->connection_handlers },
+        Kamaitachi::ConnectionHandler->new(%options, context => $self);
+}
+
+sub register_services {
+    my ($self, @args) = @_;
+
+    while (@args) {
+        my $key   = shift @args;
+        my $class = shift @args;
+
+        unless (ref($class)) {
+            eval qq{ use $class };
+            die $@ if $@;
+
+            $class = $class->new;
+        }
+
+        push @{ $self->services }, [ glob_to_regex($key), $class ];
+    }
+}
+    
+sub run {
+    my ($self) = @_;
+    $self->cv->recv;
+}
+
+__PACKAGE__->meta->make_immutable;
+
+__END__
 
 =head1 NAME
 
@@ -60,7 +78,8 @@ Kamaitachi - perl flash media server
 
     use Kamaitachi;
     
-    my $kamaitachi = Kamaitachi->new( port => 1935 );
+    my $kamaitachi = Kamaitachi->new;
+    $kamaitachi->add_handler( port => 1935 );
     
     $kamaitachi->register_services(
         'servive1' => 'Your::Service::Class1',
@@ -82,8 +101,6 @@ If you want to use kamaitachi, look at example directory. it contains both serve
 
 GitHub: http://github.com/typester/kamaitachi
 
-Issues: http://karas.unknownplace.org/ditz/kamaitachi/
-
 IRC: #kamaitachi @ chat.freenode.net
 
 =head1 METHODS
@@ -93,70 +110,6 @@ IRC: #kamaitachi @ chat.freenode.net
     Kamaitachi->new( %options );
 
 Create kamaitachi server object.
-
-Available option parameters are:
-
-=over 4
-
-=item port
-
-port number to listen (default 1935)
-
-=item buffer_size
-
-socket buffer size to read (default 8192)
-
-=back
-
-=cut
-
-sub BUILD {
-    my $self = shift;
-
-    my $ssock = IO::Socket::INET->new(
-        LocalPort => $self->port,
-        Type      => SOCK_STREAM,
-        Blocking  => 0,
-        ReuseAddr => 1,
-        Listen    => 10,
-    ) or die $!;
-    IO::Handle::blocking($ssock, 0);
-
-    Danga::Socket->AddOtherFds(
-        fileno($ssock) => sub {
-            my $csock = $ssock->accept or return;
-
-            $self->logger->debug(sprintf("Listen child making a Client for %d.", fileno($csock)));
-
-            IO::Handle::blocking($csock, 0);
-            setsockopt($csock, IPPROTO_TCP, TCP_NODELAY, pack('l', 1)) or die;
-
-            my $session = Kamaitachi::Session->new(
-                id      => fileno($csock),
-                context => $self,
-            );
-            $self->sessions->[ $session->id ] = $session;
-
-            Kamaitachi::Socket->new(
-                handle        => $csock,
-                context       => $self,
-                session       => $session,
-                on_read_ready => sub {
-                    my $socket = shift;
-
-                    my $bref = $socket->read( $self->buffer_size );
-                    unless (defined $bref) {
-                        $socket->close;
-                        return;
-                    }
-
-                    $session->io->push($$bref);
-                    $session->handler->( $session );
-                },
-            );
-        }
-    );
-}
 
 =head2 register_services
 
@@ -169,54 +122,11 @@ sub BUILD {
 
 Register own service classes.
 
-=cut
-
-sub register_services {
-    my ($self, @args) = @_;
-
-    local $Text::Glob::strict_wildcard_slash = 0;
-
-    while (@args) {
-        my $key   = shift @args;
-        my $class = shift @args;
-
-        unless (ref($class)) {
-            eval qq{ use $class };
-            die $@ if $@;
-
-            $class = $class->new;
-        }
-
-        push @{ $self->services }, [ glob_to_regex($key), $class ];
-    }
-}
-
 =head2 run
 
     $kamaitachi->run
 
 Start kamaitachi
-
-=cut
-
-sub run {
-    my $self = shift;
-
-    Danga::Socket->AddTimer(
-        0,
-        sub {
-            my $poll
-                = $Danga::Socket::HaveKQueue ? 'kqueue'
-                : $Danga::Socket::HaveEpoll  ? 'epoll'
-                :                              'poll';
-            $self->logger->debug(
-                "started kamaitachi port $self->{port} with $poll"
-            );
-        }
-    );
-
-    Danga::Socket->EventLoop;
-}
 
 =head1 AUTHOR
 
@@ -224,7 +134,7 @@ Daisuke Murase <typester@cpan.org>
 
 Hideo Kimura <hide@cpan.org>
 
-=head1 COPYRIGHT
+=head1 COPYRIGHT AND LICENSE
 
 This program is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
@@ -233,5 +143,3 @@ The full text of the license can be found in the
 LICENSE file included with this module.
 
 =cut
-
-__PACKAGE__->meta->make_immutable;

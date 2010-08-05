@@ -1,5 +1,5 @@
 package Kamaitachi::Service::Recorder;
-use Moose::Role;
+use Any::Moose '::Role';
 
 use Path::Class qw/file dir/;
 use Data::AMF::IO;
@@ -57,7 +57,7 @@ after "on_packet_$_" => sub {
 
     if ($packet->type eq 0x09) {
         my $initial_frame;
-        if (not $packet->partial) {
+        if ($packet->is_full) {
             # check key frame
             my $first = unpack('C', substr $packet->data, 0, 1);
             $initial_frame = $packet if ($first >> 4 == 1);

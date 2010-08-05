@@ -1,5 +1,5 @@
 package Kamaitachi::Service::Streaming;
-use Moose::Role;
+use Any::Moose '::Role';
 
 use Kamaitachi::Packet;
 
@@ -46,7 +46,7 @@ before 'on_invoke_connect' => sub {
 
 sub on_invoke_createStream {
     my ( $self, $session, $req ) = @_;
-    $req->response( undef, 1 );
+    $req->result( undef, 1 );
 }
 
 sub on_invoke_deleteStream {
@@ -82,7 +82,7 @@ sub on_invoke_publish {
     my ( $self, $session, $req ) = @_;
 
     my $name = $req->args->[1];
-    $self->logger->debug( sprintf 'start publish "%s"', $name );
+    $session->logger->debug( sprintf 'start publish "%s"', $name );
 
     # cleanup old sessions when republish with new name
     my $is_owner = $self->is_owner($session);
@@ -143,8 +143,8 @@ sub on_invoke_play {
         }
         );
 
-    unless ( $owner_session->chunk_size == $session->chunk_size ) {
-        $session->set_chunk_size( $owner_session->chunk_size );
+    unless ( $owner_session->io->read_chunk_size == $session->io->write_chunk_size ) {
+        $session->set_chunk_size( $owner_session->io->read_chunk_size );
     }
 
     $self->send_clear($session);
@@ -171,8 +171,8 @@ sub on_invoke_pause {
 
         # reset chunk_size
         my $owner = $self->child->[ $stream_info->{owner} ];
-        if ( $owner and $owner->chunk_size != $session->chunk_size ) {
-            $session->set_chunk_size( $owner->chunk_size );
+        if ( $owner and $owner->io->read_chunk_size != $session->io->write_chunk_size ) {
+            $session->set_chunk_size( $owner->io->read_chunk_size );
         }
     }
 }
@@ -191,8 +191,7 @@ before on_packet_video => sub {
     my $stream_info = $self->get_stream_info($session) or return;
 
     my $initial_frame;
-    if ( not $packet->partial ) {
-
+    if ($packet->is_full) {
         # check key frame
         my $first = unpack( 'C', substr $packet->data, 0, 1 );
         $initial_frame = $packet if ( $first >> 4 == 1 );
@@ -204,11 +203,10 @@ before on_packet_video => sub {
         unless ( $stream_info->{child}{$child_id}[0] ) {    # first
             next unless $initial_frame;
             $stream_info->{child}{$child_id}[0]++;
-            $child_session->io->write(
-                $initial_frame->serialize( $child_session->chunk_size ) );
+            $child_session->io->write($initial_frame);
         }
         else {
-            $child_session->io->write( $packet->raw );
+            $child_session->io->write($packet->raw_data);
         }
     }
 };
@@ -223,11 +221,10 @@ before on_packet_audio => sub {
 
         unless ( $stream_info->{child}{$child_id}[1] ) {    # first
             $stream_info->{child}{$child_id}[1]++;
-            $child_session->io->write(
-                $packet->serialize( $child_session->chunk_size ) );
+            $child_session->io->write($packet);
         }
         else {
-            $child_session->io->write( $packet->raw );
+            $child_session->io->write($packet->raw_data);
         }
     }
 };

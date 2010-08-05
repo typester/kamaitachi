@@ -1,19 +1,5 @@
 package Kamaitachi::Service::ConnectionHandler;
-use Moose::Role;
-
-=head1 NAME
-
-Kamaitachi::Service::ConnectionHandler - service role to create connect response
-
-=head1 SYNOPSIS
-
-=head1 DESCRIPTION
-
-=head1 METHODS
-
-=head2 connect_success_response
-
-=cut
+use Any::Moose '::Role';
 
 sub connect_success_response {
     return(
@@ -29,10 +15,6 @@ sub connect_success_response {
     );
 }
 
-=head2 connect_reject_response
-
-=cut
-
 sub connect_reject_response {
     my ($self, $reason) = @_;
 
@@ -44,6 +26,24 @@ sub connect_reject_response {
         }
     );
 }
+
+1;
+
+__END__
+
+=head1 NAME
+
+Kamaitachi::Service::ConnectionHandler - service role to create connect response
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+=head1 METHODS
+
+=head2 connect_success_response
+
+=head2 connect_reject_response
 
 =head1 SEE ALSO
 
@@ -65,6 +65,4 @@ The full text of the license can be found in the
 LICENSE file included with this module.
 
 =cut
-
-1;
 

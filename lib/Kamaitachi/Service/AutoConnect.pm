@@ -1,11 +1,13 @@
 package Kamaitachi::Service::AutoConnect;
-use Moose::Role;
+use Any::Moose '::Role';
 
 with 'Kamaitachi::Service::ConnectionHandler';
 
 sub on_invoke_connect {
     my ($self, $session, $packet) = @_;
-    $packet->response( $self->connect_success_response );
+    my $res = $packet->result( $self->connect_success_response );
+
+    $res;
 }
 
 1;
