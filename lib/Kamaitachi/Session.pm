@@ -196,6 +196,7 @@ sub set_chunk_size {
 
 sub close {
     my ($self) = @_;
+    $self->service->on_close($self) if $self->service;
     delete $self->context->sessions->[fileno $self->fh];
 }
 
