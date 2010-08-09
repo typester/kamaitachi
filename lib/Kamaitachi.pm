@@ -14,7 +14,7 @@ use Kamaitachi::ConnectionHandler;
 
 has sessions => (
     is      => 'rw',
-    default => sub { [] },
+    default => sub { {} },
 );
 
 has services => (
@@ -41,6 +41,21 @@ sub add_handler {
     my ($self, %options) = @_;
     push @{ $self->connection_handlers },
         Kamaitachi::ConnectionHandler->new(%options, context => $self);
+}
+
+sub get_session {
+    my ($self, $id) = @_;
+    $self->sessions->{ $id };
+}
+
+sub add_session {
+    my ($self, $session) = @_;
+    $self->sessions->{ $session->id } = $session;
+}
+
+sub remove_session {
+    my ($self, $session) = @_;
+    delete $self->sessions->{ $session->id };
 }
 
 sub register_services {

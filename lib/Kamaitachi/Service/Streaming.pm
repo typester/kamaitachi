@@ -20,14 +20,12 @@ has stream_id => (
 
 has stream_owner_session => (
     is      => 'rw',
-    isa     => 'ArrayRef',
-    default => sub { [] },
+    default => sub { {} },
 );
 
 has stream_child_session => (
     is      => 'rw',
-    isa     => 'ArrayRef',
-    default => sub { [] },
+    default => sub { {} },
 );
 
 has stream_info => (
@@ -62,7 +60,7 @@ sub on_invoke_closeStream {
     if ( $self->is_owner($session) ) {
         $self->send_status( $session, 'NetStream.Unpublish.Success' );
         for my $child_id ( keys %{ $stream_info->{child} } ) {
-            my $child_session = $self->child->[$child_id] or next;
+            my $child_session = $self->child->{$child_id} or next;
             $self->send_status( $child_session, 'NetStream.Unpublish.Notify' );
         }
     }
@@ -94,7 +92,7 @@ sub on_invoke_publish {
         if ( $is_owner ) {
             my $stream_info = $self->get_stream_info($session) or return;
             for my $child_id ( keys %{ $stream_info->{child} } ) {
-                my $child_session = $self->child->[$child_id] or next;
+                my $child_session = $self->child->{$child_id} or next;
                 $self->send_status( $child_session,
                     'NetStream.Publish.Notify' );
             }
@@ -110,7 +108,7 @@ sub on_invoke_publish {
     }
     else {
 
-        $self->stream_owner_session->[ $session->id ] = $name;
+        $self->stream_owner_session->{ $session->id } = $name;
         $self->stream_info->{$name} = {
             owner => $session->id,
             child => {},
@@ -132,10 +130,10 @@ sub on_invoke_play {
         );
     }
 
-    $self->stream_child_session->[ $session->id ] = $name;
+    $self->stream_child_session->{ $session->id } = $name;
     $self->stream_info->{$name}{child}{ $session->id } = [ 0, 0 ];
 
-    my $owner_session = $self->child->[ $self->stream_info->{$name}{owner} ]
+    my $owner_session = $self->child->{ $self->stream_info->{$name}{owner} }
         or return $self->send_status(
         $session,
         {   level => 'error',
@@ -170,7 +168,7 @@ sub on_invoke_pause {
         $stream_info->{child}{ $session->id } = [ 0, 0 ];
 
         # reset chunk_size
-        my $owner = $self->child->[ $stream_info->{owner} ];
+        my $owner = $self->child->{ $stream_info->{owner} };
         if ( $owner and $owner->io->read_chunk_size != $session->io->write_chunk_size ) {
             $session->set_chunk_size( $owner->io->read_chunk_size );
         }
@@ -198,7 +196,7 @@ before on_packet_video => sub {
     }
 
     for my $child_id ( keys %{ $stream_info->{child} } ) {
-        my $child_session = $self->child->[$child_id] or next;
+        my $child_session = $self->child->{$child_id} or next;
 
         unless ( $stream_info->{child}{$child_id}[0] ) {    # first
             next unless $initial_frame;
@@ -217,7 +215,7 @@ before on_packet_audio => sub {
     my $stream_info = $self->get_stream_info($session) or return;
 
     for my $child_id ( keys %{ $stream_info->{child} } ) {
-        my $child_session = $self->child->[$child_id] or next;
+        my $child_session = $self->child->{$child_id} or next;
 
         unless ( $stream_info->{child}{$child_id}[1] ) {    # first
             $stream_info->{child}{$child_id}[1]++;
@@ -233,7 +231,7 @@ before 'on_close' => sub {
     my ( $self, $session ) = @_;
 
     my $child_session_name
-        = $self->stream_child_session->[ $session->id ] or return;
+        = $self->stream_child_session->{ $session->id } or return;
 
     delete $self->stream_info->{$child_session_name}{child}{ $session->id };
 };
@@ -242,9 +240,9 @@ after 'on_close' => sub {
     my ( $self, $session ) = @_;
 
     my $owner_session_name
-        = delete $self->stream_owner_session->[ $session->id ];
+        = delete $self->stream_owner_session->{ $session->id };
     my $child_session_name
-        = delete $self->stream_child_session->[ $session->id ];
+        = delete $self->stream_child_session->{ $session->id };
 
     if ($owner_session_name) {
         # TODO client notify.
@@ -254,8 +252,8 @@ after 'on_close' => sub {
 
 sub get_stream_name {
     my ( $self, $session ) = @_;
-    my $stream = $self->stream_owner_session->[ $session->id ]
-        || $self->stream_child_session->[ $session->id ];
+    my $stream = $self->stream_owner_session->{ $session->id }
+        || $self->stream_child_session->{ $session->id };
 }
 
 sub get_stream_info {
@@ -269,7 +267,7 @@ sub get_stream_info {
 sub is_owner {
     my ( $self, $session ) = @_;
     my $info = $self->get_stream_info($session) or return;
-    $info->{owner} == $session->id;
+    $info->{owner} eq $session->id;
 }
 
 1;

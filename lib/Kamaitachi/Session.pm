@@ -8,15 +8,15 @@ use Try::Tiny;
 use Kamaitachi::Packet;
 use Kamaitachi::Packet::Function;
 
-has id => (
-    is      => 'rw',
-    lazy    => 1,
-    default => sub { fileno($_[0]->fh) },
-);
-
-has [qw/fh proto/] => (
+has [qw/id fh proto/] => (
     is       => 'ro',
     required => 1,
+);
+
+has fileno => (
+    is      => 'rw',
+    lazy    => 1,
+    default => sub { fileno($_[0]->{fh}) },
 );
 
 has context => (
@@ -68,7 +68,7 @@ sub BUILD {
         my ($h, $fatal, $message) = @_;
 
         if ($self) {
-            $self->logger->error(sprintf '[%d] Connection error: %s', $self->id, $message);
+            $self->logger->error(sprintf '[%d] Connection error: %s', $self->fileno, $message);
             $self->close;
         }
     });
@@ -81,25 +81,25 @@ sub BUILD {
     $self->io->handle_client_handshaking(
         on_complete => sub {
             my ($h) = @_;
-            $self->context->logger->debug(sprintf '[%d] handshake successful', $self->id);
+            $self->context->logger->debug(sprintf '[%d] handshake successful', $self->fileno);
             $self->io->handle_rtmp_packet(
                 on_packet => $packet_handler,
             );            
         },
         on_fail => sub {
             my ($h, $reason) = @_;
-            $self->context->logger->debug(sprintf '[%d] handshake failed: %s', $self->id, $reason);
+            $self->context->logger->debug(sprintf '[%d] handshake failed: %s', $self->fileno, $reason);
             $self->close;
         },
     );
     Scalar::Util::weaken($self);
 
-    $self->logger->debug(sprintf '[%d] Established connection', $self->id);
+    $self->logger->debug(sprintf '[%d] Established connection (id:%s)', $self->fileno, $self->id);
 }
 
 sub DEMOLISH {
     my ($self) = @_;
-    $self->logger->debug(sprintf '[%d] Closing connection', $self->id);
+    $self->logger->debug(sprintf '[%d] Closing connection', $self->fileno);
 }
 
 sub packet_handler {
@@ -107,10 +107,10 @@ sub packet_handler {
 
     my $name = $self->packet_names->[ $packet->type ];
     unless (defined $name) {
-        $self->logger->debug(sprintf '[%d] unknown packet: 0x%02x', $self->id, $packet->type);
+        $self->logger->debug(sprintf '[%d] unknown packet: 0x%02x', $self->fileno, $packet->type);
         return;
     }
-    #$self->logger->debug(sprintf '[%d] got packet: 0x%02x (%s)', $self->id, $packet->type, $name);
+    #$self->logger->debug(sprintf '[%d] got packet: 0x%02x (%s)', $self->fileno, $packet->type, $name);
 
     if ($packet->type == 0x14) {
         $self->packet_invoke($packet) if $packet->is_full;
@@ -131,7 +131,7 @@ sub packet_invoke {
     };
 
     if ($err) {
-        $self->logger->debug(sprintf '[%d] Decording AMF data failed: %s', $self->id, $err);
+        $self->logger->debug(sprintf '[%d] Decording AMF data failed: %s', $self->fileno, $err);
         $self->close;
         return;
     }
@@ -142,7 +142,7 @@ sub packet_invoke {
         id     => $id,
         args   => \@args,
     );
-    $self->logger->debug(sprintf '[%d] [invoke] -> %s', $self->id, $f->method);
+    $self->logger->debug(sprintf '[%d] [invoke] -> %s', $self->fileno, $f->method);
 
     if ($f->method eq 'connect') {
         my $connect_info = $f->args->[0];
@@ -197,7 +197,7 @@ sub set_chunk_size {
 sub close {
     my ($self) = @_;
     $self->service->on_close($self) if $self->service;
-    delete $self->context->sessions->[fileno $self->fh];
+    $self->context->remove_session($self);
 }
 
 sub _build_io {

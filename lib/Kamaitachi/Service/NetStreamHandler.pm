@@ -50,7 +50,7 @@ sub send_status {
     $response->{description} ||= '-';
     $response->{clientid}    ||= 1;
 
-    $session->logger->debug(sprintf '[status] %s for %d', $response->{code}, $session->id);
+    $session->logger->debug(sprintf '[%d] [status] %s', $session->fileno, $response->{code});
 
     $session->io->write(
         Kamaitachi::Packet->new(

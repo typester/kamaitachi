@@ -8,7 +8,7 @@ use Kamaitachi::Packet::Function;
 sub broadcast {
     my ($self, $session, $packet) = @_;
 
-    for my $child_session (@{ $self->child }) {
+    for my $child_session (values %{ $self->child }) {
         next unless defined $child_session;
         next if $session->id eq $child_session->id;
         $child_session->io->write($packet);
@@ -23,7 +23,7 @@ sub broadcast_stream {
     my $stream_info = $self->get_stream_info($session) or return;
 
     for my $child_session_id (keys %{ $stream_info->{child} }  ) {
-        my $child_session = $self->child->[ $child_session_id ];
+        my $child_session = $self->child->{ $child_session_id };
         next unless defined $child_session;
         $child_session->io->write($packet);
     }
@@ -37,7 +37,7 @@ sub broadcast_stream_all {
     my $stream_info = $self->get_stream_info($session) or return;
 
     for my $child_session_id ($stream_info->{owner}, keys %{ $stream_info->{child} }  ) {
-        my $child_session = $self->child->[ $child_session_id ];
+        my $child_session = $self->child->{ $child_session_id };
         next unless defined $child_session;
         $child_session->io->write($packet);
     }
