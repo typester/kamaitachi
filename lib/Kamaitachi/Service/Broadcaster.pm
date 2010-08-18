@@ -44,14 +44,14 @@ sub broadcast_stream_all {
 }
 
 sub broadcast_notify_packet {
-    my ($self, $method, $data) = @_;
+    my ($self, $method, @data) = @_;
 
     my $notify_packet = Kamaitachi::Packet::Function->new(
         number => 3,
         type   => 0x14,
         id     => undef,
         method => $method,
-        args   => [undef, $data],
+        args   => [undef, @data],
     );
 }
 

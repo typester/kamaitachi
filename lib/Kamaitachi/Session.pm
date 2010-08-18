@@ -71,10 +71,19 @@ sub BUILD {
             $self->logger->error(sprintf '[%d] Connection error: %s', $self->fileno, $message);
             $self->close;
         }
+        $h->destroy;
     });
 
     $self->io->on_eof(sub {
-        $self->close if $self;
+        if ($self) {
+            if ($self->proto =~ /t$/) {
+                # keep session at HTTP tunneling protocol.
+                # TODO: timeout for clearing session
+            }
+            else {
+                $self->close;
+            }
+        }
     });
 
     my $packet_handler = sub { $self->packet_handler(@_) };

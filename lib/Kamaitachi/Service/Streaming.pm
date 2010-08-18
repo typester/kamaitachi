@@ -62,12 +62,14 @@ sub on_invoke_closeStream {
         for my $child_id ( keys %{ $stream_info->{child} } ) {
             my $child_session = $self->child->{$child_id} or next;
             $self->send_status( $child_session, 'NetStream.Unpublish.Notify' );
+            $stream_info->{child}{$child_id} = [0, 0];
         }
     }
     else {
         delete $stream_info->{child}{ $session->id };
     }
 
+    $req->result(undef);
 }
 
 sub on_invoke_releaseStream {
@@ -107,13 +109,13 @@ sub on_invoke_publish {
         }
     }
     else {
-
         $self->stream_owner_session->{ $session->id } = $name;
         $self->stream_info->{$name} = {
             owner => $session->id,
             child => {},
         };
     }
+
     $self->send_status( $session, 'NetStream.Publish.Start' );
 }
 
@@ -141,10 +143,6 @@ sub on_invoke_play {
         }
         );
 
-    unless ( $owner_session->io->read_chunk_size == $session->io->write_chunk_size ) {
-        $session->set_chunk_size( $owner_session->io->read_chunk_size );
-    }
-
     $self->send_clear($session);
     $self->send_status( $session, 'NetStream.Play.Reset' );
     $self->send_status( $session, 'NetStream.Play.Start' );
@@ -166,12 +164,6 @@ sub on_invoke_pause {
         $self->send_status( $session, 'NetStream.Unpause.Notify' );
 
         $stream_info->{child}{ $session->id } = [ 0, 0 ];
-
-        # reset chunk_size
-        my $owner = $self->child->{ $stream_info->{owner} };
-        if ( $owner and $owner->io->read_chunk_size != $session->io->write_chunk_size ) {
-            $session->set_chunk_size( $owner->io->read_chunk_size );
-        }
     }
 }
 
@@ -198,6 +190,10 @@ before on_packet_video => sub {
     for my $child_id ( keys %{ $stream_info->{child} } ) {
         my $child_session = $self->child->{$child_id} or next;
 
+        if ($session->io->read_chunk_size != $child_session->io->write_chunk_size) {
+            $child_session->set_chunk_size($session->io->read_chunk_size);
+        }
+
         unless ( $stream_info->{child}{$child_id}[0] ) {    # first
             next unless $initial_frame;
             $stream_info->{child}{$child_id}[0]++;
@@ -217,9 +213,15 @@ before on_packet_audio => sub {
     for my $child_id ( keys %{ $stream_info->{child} } ) {
         my $child_session = $self->child->{$child_id} or next;
 
+        if ($session->io->read_chunk_size != $child_session->io->write_chunk_size) {
+            $child_session->set_chunk_size($session->io->read_chunk_size);
+        }
+
         unless ( $stream_info->{child}{$child_id}[1] ) {    # first
-            $stream_info->{child}{$child_id}[1]++;
-            $child_session->io->write($packet);
+            if ($packet->is_full) {
+                $stream_info->{child}{$child_id}[1]++;
+                $child_session->io->write($packet);
+            }
         }
         else {
             $child_session->io->write($packet->raw_data);

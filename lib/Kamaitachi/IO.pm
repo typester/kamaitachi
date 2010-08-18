@@ -142,6 +142,13 @@ sub handle_rtmp_packet {
     Scalar::Util::weaken($self);
 }
 
+sub reset_fh {
+    my ($self, $fh) = @_;
+
+    $self->fh($fh);
+    $self->clear_handle;
+}
+
 sub push {
     my ($self, $bytes) = @_;
     $self->clear_buffer_length;
@@ -241,6 +248,7 @@ sub serialize_packet {
             $rest = $chunk_size if $rest > $chunk_size;
 
             my $read = substr $packet->data, $cursor, $rest;
+
             $read .= pack 'C', $packet->number | 0xc0 if $cursor + length($read) < $size;
             $io->write($read);
         }
