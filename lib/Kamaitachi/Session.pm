@@ -41,22 +41,27 @@ has packet_names => (
         'packet_chunk_size',    # 0x01
         undef,                  # 0x02
         'packet_bytes_read',    # 0x03
-        'packet_ping',          # 0x04
-        'packet_server_bw',     # 0x05
-        'packet_client_bw',     # 0x06
-        undef,                  # 0x07
-        'packet_audio',         # 0x08
-        'packet_video',         # 0x09
+        'packet_control',       # 0x04
+        'packet_window_size',   # 0x05
+        'packet_peer_window_size',         # 0x06
+        undef,                             # 0x07
+        'packet_audio',                    # 0x08
+        'packet_video',                    # 0x09
         undef, undef, undef, undef, undef, # 0x0a - 0x0e
-        'packet_flex_stream',   # 0x0f
-        'packet_flex_shared_object', # 0x10
-        'packet_flex_message',       # 0x11
-        'packet_notify',             # 0x12
-        'packet_shared_object',      # 0x13
-        'packet_invoke',             # 0x14
-        undef,                       # 0x15
-        'packet_flv_data',           # 0x16
+        'packet_notify3',                  # 0x0f      data AMF3
+        'packet_shared_object3',           # 0x10
+        'packet_invoke3',                  # 0x11 invoke AMF3
+        'packet_notify',                   # 0x12 data AMF0
+        'packet_shared_object',            # 0x13
+        'packet_invoke',                   # 0x14 invoke AMF0
+        undef,                             # 0x15
+        'packet_flv_data',                 # 0x16
     ]},
+);
+
+has streams => (
+    is      => 'rw',
+    default => sub { [] },
 );
 
 no Any::Moose;
@@ -151,7 +156,8 @@ sub packet_invoke {
         id     => $id,
         args   => \@args,
     );
-    $self->logger->debug(sprintf '[%d] [invoke] -> %s', $self->fileno, $f->method);
+    $self->logger->debug(sprintf '[%d] [invoke] -> %s csid:%d', $self->fileno, $f->method, $f->number)
+        unless $f->method eq 'vol';
 
     if ($f->method eq 'connect') {
         my $connect_info = $f->args->[0];
@@ -205,6 +211,7 @@ sub set_chunk_size {
 
 sub close {
     my ($self) = @_;
+
     $self->service->on_close($self) if $self->service;
     $self->context->remove_session($self);
 }

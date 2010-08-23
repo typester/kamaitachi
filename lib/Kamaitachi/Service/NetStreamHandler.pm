@@ -56,7 +56,7 @@ sub send_status {
         Kamaitachi::Packet->new(
             number => 4,
             type   => 0x14,
-            obj    => 0x01000000,
+            stream_id    => 0x01000000,
             data   => $session->io->encode_amf( 'onStatus', 1, undef, $response, ),
         )
     );

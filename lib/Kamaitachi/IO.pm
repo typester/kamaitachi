@@ -42,7 +42,12 @@ has [qw/read_chunk_size write_chunk_size/] => (
     default => 128,
 );
 
-has packet_cache => (
+has read_packet_cache => (
+    is      => 'rw',
+    default => sub { [] },
+);
+
+has write_packet_cache => (
     is      => 'rw',
     default => sub { [] },
 );
@@ -130,10 +135,12 @@ sub handle_rtmp_packet {
         $self->push(delete $handle->{rbuf});
 
         while (my $packet = $self->get_rtmp_packet) {
-            # handle chunk size automatically
-            if ($packet->type == 0x01 and $packet->is_full) {
-                my $size = unpack 'N', $packet->data;
-                $self->read_chunk_size($size);
+            if ($packet->is_full) {
+                # handle chunk size automatically
+                if ($packet->type == 0x01) {
+                    my $size = unpack 'N', $packet->data;
+                    $self->read_chunk_size($size);
+                }
             }
 
             $self->{_callbacks}{on_packet}->($packet) if $self;
@@ -219,22 +226,45 @@ sub serialize_packet {
 
     my $io = Data::AMF::IO->new( data => q[] );
 
+    my $first = 0;
+    my $cached = $self->write_packet_cache->[ $packet->number ];
+    if ($cached) {
+        if ($cached->stream_id != $packet->stream_id) {
+            # require full packet
+        }
+        elsif ($cached->type != $packet->type or $cached->size != $packet->size) {
+            $first = 1;
+        }
+        elsif ($cached->timer != $packet->timer) {
+            $first = 2;
+        }
+        else {
+            $first = 3;
+        }
+    }
+
     if ($packet->number >= 0x100) {
-        $io->write_u8( 0 & 0x3f );
+        $io->write_u8( (0 & 0x3f) | ($first << 6) );
         $io->write_u16( $packet->number - 0x40 );
     }
     elsif ($packet->number > 0x40) {
-        $io->write_u8( 1 & 0x3f );
+        $io->write_u8( (1 & 0x3f) | ($first << 6) );
         $io->write_u8( $packet->number - 0x40 );
     }
     else {
-        $io->write_u8( $packet->number & 0x3f );
+        $io->write_u8( ($packet->number & 0x3f) | ($first << 6) );
     }
 
-    $io->write_u24( $packet->timer );
-    $io->write_u24( $packet->size );
-    $io->write_u8( $packet->type );
-    $io->write_u32( $packet->stream_id );
+    if ($first <= 2) {
+        $io->write_u24( $packet->timer );
+    }
+    if ($first <= 1) {
+        $io->write_u24( $packet->size );
+        $io->write_u8( $packet->type );
+    }
+    if ($first <= 0) {
+        $io->write( pack 'V', $packet->stream_id );
+    }
 
     my $size = $packet->size;
     my $data_size = length $packet->data;
@@ -253,6 +283,14 @@ sub serialize_packet {
             $io->write($read);
         }
     }
+
+    $self->write_packet_cache->[ $packet->number ] = Kamaitachi::Packet->new(
+        number    => $packet->number,
+        type      => $packet->type,
+        timer     => $packet->timer,
+        size      => $packet->size,
+        stream_id => $packet->stream_id,
+    );
 
     $io->data;
 }
@@ -277,7 +315,7 @@ sub get_rtmp_packet {
         $number += 64;
     }
 
-    my $packet = $self->packet_cache->[ $number ] || Kamaitachi::Packet->new(
+    my $packet = $self->read_packet_cache->[ $number ] || Kamaitachi::Packet->new(
         number => $number,
     );
 
@@ -312,9 +350,10 @@ sub get_rtmp_packet {
         $packet->filled(0);
     }
     if ($header_size <= 0) {
-        my $stream_id = $self->read_u32;
+        my $stream_id = $self->read(4);
         return $self->reset unless defined $stream_id;
 
+        $stream_id = unpack 'V', $stream_id;
         $packet->stream_id($stream_id);
     }
 
@@ -332,7 +371,7 @@ sub get_rtmp_packet {
     }
 
     $packet->raw_data( $self->spin );
-    $self->packet_cache->[ $number ] = $packet;
+    $self->read_packet_cache->[ $number ] = $packet;
 
     $packet;
 }
@@ -356,3 +395,4 @@ sub _build_amf0_parser {
 }
 
 __PACKAGE__->meta->make_immutable;
+

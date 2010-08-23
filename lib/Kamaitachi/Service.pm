@@ -10,15 +10,15 @@ sub on_close { 0 }
 
 sub on_packet_chunk_size { }
 sub on_packet_bytes_read { }
-sub on_packet_ping { }
-sub on_packet_server_bw { }
-sub on_packet_client_bw { }
+sub on_packet_control { }
+sub on_packet_window_size { }
+sub on_packet_peer_window_size { }
 sub on_packet_audio { }
 sub on_packet_video { }
-sub on_packet_flex_stream { }
-sub on_packet_flex_shared_object { }
-sub on_packet_flex_message { }
-sub on_packet_packet_notify { }
+sub on_packet_notify3 { }
+sub on_packet_shared_object3 { }
+sub on_packet_invoke3 { }
+sub on_packet_notify { }
 sub on_packet_shared_object { }
 sub on_packet_invoke { }
 sub on_packet_flv_data { }
