@@ -7,6 +7,7 @@ no Any::Moose;
 
 sub on_connect { 0 }
 sub on_close { 0 }
+sub on_packet { }
 
 sub on_packet_chunk_size { }
 sub on_packet_bytes_read { }

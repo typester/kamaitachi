@@ -126,6 +126,10 @@ sub packet_handler {
     }
     #$self->logger->debug(sprintf '[%d] got packet: 0x%02x (%s)', $self->fileno, $packet->type, $name);
 
+    # all packet handler
+    $self->dispatch(on_packet => $packet);
+
+    # type packet handler
     if ($packet->type == 0x14) {
         $self->packet_invoke($packet) if $packet->is_full;
     }

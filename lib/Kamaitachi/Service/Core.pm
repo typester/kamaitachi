@@ -51,7 +51,7 @@ before on_packet_control => sub {
 };
 
 # auto response bytes_read
-before "on_packet_$_" => sub {
+after on_packet => sub {
     my ($self, $session, $packet) = @_;
     return unless $packet->is_full;
 
@@ -61,7 +61,7 @@ before "on_packet_$_" => sub {
         $session->io->write(Kamaitachi::Packet::Control->bytes_read($read));
         $self->{_read_bytes} = 0;
     }
-} for qw/audio video/;
+};
 
 before on_connect => sub {
     my ($self, $session) = @_;

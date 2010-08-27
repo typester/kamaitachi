@@ -59,6 +59,7 @@ sub stream_begin {
 
 sub ping {
     my ($class, $timer) = @_;
+    $timer = time unless defined $timer;
 
     my $packet = $class->new( type => 4 );
 
