@@ -109,6 +109,10 @@ sub handle_client_handshaking {
             if ($chunk eq $server_packet) {
                 $self->{_callbacks}{on_complete}->($handle);
             } else {
+                $self->{_callbacks}{on_complete}->($handle);
+                return;
+
+                # Weird: sometimes happen this even if client is official flash player.
                 my $cb = $self->{_callbacks}{on_fail};
                 if ($cb) {
                     $cb->($handle, 'invalid client echo');
