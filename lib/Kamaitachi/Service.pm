@@ -3,6 +3,12 @@ use Any::Moose;
 
 with 'Kamaitachi::Service::Core';
 
+has context => (
+    is       => 'rw',
+    weak_ref => 1,
+    handles  => ['logger'],
+);
+
 no Any::Moose;
 
 sub on_connect { 0 }

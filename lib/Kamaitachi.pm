@@ -71,6 +71,7 @@ sub register_services {
 
             $class = $class->new;
         }
+        $class->context($self);
 
         push @{ $self->services }, [ glob_to_regex($key), $class ];
     }
