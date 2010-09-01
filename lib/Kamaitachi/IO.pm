@@ -243,12 +243,12 @@ sub serialize_packet {
         }
     }
 
-    if ($packet->number >= 0x100) {
-        $io->write_u8( (0 & 0x3f) | ($first << 6) );
+    if ($packet->number >= 0x140) {
+        $io->write_u8( 1 | ($first << 6) );
         $io->write_u16( $packet->number - 0x40 );
     }
-    elsif ($packet->number > 0x40) {
-        $io->write_u8( (1 & 0x3f) | ($first << 6) );
+    elsif ($packet->number >= 0x40) {
+        $io->write_u8( 0 | ($first << 6) );
         $io->write_u8( $packet->number - 0x40 );
     }
     else {
