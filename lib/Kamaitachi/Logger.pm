@@ -37,7 +37,7 @@ sub _build_logger {
     $h->config( config => {
         screen => {
             log_to   => 'STDERR',
-            maxlevel => 'debug',
+            maxlevel => $self->log_level,
             minlevel => 'emerg',
         },
     });
